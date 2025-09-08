@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Manai Restaurant</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="../css/style.css" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-width: 250px;
+            --header-height: 76px;
+            --primary-color: #4e73df;
+            --secondary-color: #858796;
+            --success-color: #1cc88a;
+            --info-color: #36b9cc;
+            --warning-color: #f6c23e;
+            --danger-color: #e74a3b;
+            --light-bg: #f8f9fc;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--light-bg);
+        }
+        
+        /* Login Styles */
+        .login-container {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+        
+        .login-card {
+            width: 100%;
+            max-width: 400px;
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+        }
+        
+        .login-logo {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        /* Sidebar Styles */
+        #sidebar {
+            width: var(--sidebar-width);
+            position: fixed;
+            top: var(--header-height);
+            left: 0;
+            height: calc(100vh - var(--header-height));
+            z-index: 100;
+            background: #fff;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+            transition: all 0.3s;
+        }
+        
+        .sidebar-brand {
+            height: var(--header-height);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem 1rem;
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--primary-color);
+            border-bottom: 1px solid #eaecf4;
+        }
+        
+        .sidebar-divider {
+            border-top: 1px solid #eaecf4;
+            margin: 1rem 0;
+        }
+        
+        .sidebar-heading {
+            padding: 0 1rem;
+            font-size: 0.85rem;
+            color: var(--secondary-color);
+            text-transform: uppercase;
+            font-weight: 800;
+            margin-top: 1.5rem;
+        }
+        
+        .nav-item {
+            position: relative;
+            margin-bottom: 0.25rem;
+        }
+        
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            color: #3a3b45;
+            font-weight: 500;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+        }
+        
+        .nav-link:hover {
+            color: var(--primary-color);
+            background-color: #f8f9fc;
+        }
+        
+        .nav-link.active {
+            color: var(--primary-color);
+            border-left-color: var(--primary-color);
+            background-color: #f8f9fc;
+        }
+        
+        .nav-link i {
+            margin-right: 0.5rem;
+            font-size: 1.1rem;
+        }
+        
+        /* Main Content */
+        #content-wrapper {
+            margin-left: var(--sidebar-width);
+            padding: 1.5rem;
+            transition: margin-left 0.3s;
+        }
+        
+        /* Card Styles */
+        .dashboard-card {
+            border: none;
+            border-radius: 0.35rem;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.1);
+            margin-bottom: 1.5rem;
+        }
+        
+        .card-header {
+            background-color: #f8f9fc;
+            border-bottom: 1px solid #e3e6f0;
+            padding: 0.75rem 1.25rem;
+            font-weight: 700;
+        }
+        
+        /* Status Badges */
+        .badge-pending {
+            background-color: var(--warning-color);
+            color: #fff;
+        }
+        
+        .badge-preparing {
+            background-color: var(--info-color);
+            color: #fff;
+        }
+        
+        .badge-delivering {
+            background-color: var(--primary-color);
+            color: #fff;
+        }
+        
+        .badge-completed {
+            background-color: var(--success-color);
+            color: #fff;
+        }
+        
+        /* Table Styles */
+        .table-responsive {
+            border-radius: 0.35rem;
+            overflow: hidden;
+        }
+        
+        .table th {
+            border-top: none;
+            font-weight: 700;
+            color: var(--secondary-color);
+            background-color: #f8f9fc;
+        }
+        
+        /* Button Styles */
+        .btn-icon {
+            width: 32px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+        
+        /* Toggle sidebar for mobile */
+        @media (max-width: 768px) {
+            #sidebar {
+                margin-left: -var(--sidebar-width);
+            }
+            
+            #content-wrapper {
+                margin-left: 0;
+            }
+            
+            #sidebar.active {
+                margin-left: 0;
+            }
+            
+            #content-wrapper.active {
+                margin-left: var(--sidebar-width);
+            }
+            
+            .sidebar-toggle {
+                display: block !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Section (shown initially) -->
+    <div id="loginSection" class="login-container">
+        <div class="login-card card">
+            <div class="card-body p-5">
+                <div class="login-logo">
+                    <i class="fas fa-utensils fa-3x text-primary mb-3"></i>
+                    <h4 class="text-gray-900">Manai Restaurant Admin</h4>
+                    <p class="text-muted">Sign in to continue</p>
+                </div>
+                <form id="adminLoginForm">
+                    <div class="form-group mb-3">
+                        <label for="adminEmail" class="form-label">Email Address</label>
+                        <input type="email" class="form-control" id="adminEmail" required placeholder="name@example.com">
+                    </div>
+                    <div class="form-group mb-4">
+                        <label for="adminPassword" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="adminPassword" required placeholder="•••••••">
+                    </div>
+                    <div class="alert alert-danger d-none" id="loginError"></div>
+                    <button type="submit" class="btn btn-primary btn-block w-100 py-2">
+                        <i class="fas fa-sign-in-alt me-2"></i>Login
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Panel (hidden initially) -->
+    <div id="adminPanel" class="d-none">
+        <!-- Top Navigation Bar -->
+        <nav class="navbar navbar-expand navbar-dark bg-white shadow fixed-top custom-navbar">
+            <div class="container-fluid">
+                <!-- Sidebar Toggle -->
+                <button id="sidebarToggle" class="btn btn-link text-dark d-md-none sidebar-toggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                
+                <!-- Brand -->
+                <a class="navbar-brand ms-2 text-primary fw-bold" href="#">
+                    <i class="fas fa-utensils me-2"></i>Manai Restaurant
+                </a>
+                
+                <!-- Navbar Items -->
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown no-arrow">
+                        <a class="nav-link dropdown-toggle text-dark" href="#" id="userDropdown" role="button" 
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="d-none d-lg-inline text-gray-600 small" id="adminUserName">Admin User</span>
+                            <img class="img-profile rounded-circle ms-2" src="https://via.placeholder.com/40" width="32" height="32">
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end shadow animated--grow-in" aria-labelledby="userDropdown">
+                            <a class="dropdown-item" href="#">
+                                <i class="fas fa-user fa-sm fa-fw me-2 text-gray-400"></i>
+                                Profile
+                            </a>
+                            <a class="dropdown-item" href="#">
+                                <i class="fas fa-cogs fa-sm fa-fw me-2 text-gray-400"></i>
+                                Settings
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="#" id="adminLogoutBtn">
+                                <i class="fas fa-sign-out-alt fa-sm fa-fw me-2 text-gray-400"></i>
+                                Logout
+                            </a>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Sidebar -->
+        <div id="sidebar" class="bg-white">
+            <div class="sidebar-brand">
+                <i class="fas fa-laugh-wink me-2"></i>
+                Admin Panel
+            </div>
+            
+            <div class="sidebar-divider"></div>
+            
+            <!-- Navigation Items -->
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#dashboard" data-section="dashboard">
+                        <i class="fas fa-fw fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                
+                <li class="sidebar-heading">Interface</li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="#orders" data-section="orders">
+                        <i class="fas fa-fw fa-shopping-bag"></i>
+                        <span>Orders</span>
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="#menu" data-section="menuManagement">
+                        <i class="fas fa-fw fa-utensils"></i>
+                        <span>Menu Management</span>
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="#reviews" data-section="reviews">
+                        <i class="fas fa-fw fa-star"></i>
+                        <span>Customer Reviews</span>
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="#reports" data-section="reports">
+                        <i class="fas fa-fw fa-chart-bar"></i>
+                        <span>Reports</span>
+                    </a>
+                </li>
+            </ul>
+            
+            <div class="sidebar-divider"></div>
+            
+            <div class="text-center p-3">
+                <button class="btn btn-primary btn-sm" id="toggleSidebar">
+                    <i class="fas fa-chevron-left"></i> Collapse
+                </button>
+            </div>
+        </div>
+
+        <!-- Content Wrapper -->
+        <div id="content-wrapper" class="bg-light">
+            <!-- Dashboard Section -->
+            <div class="admin-section" id="dashboard">
+                <!-- Page Heading -->
+                <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                    <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
+                    <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+                        <i class="fas fa-download fa-sm text-white-50"></i> Generate Report
+                    </a>
+                </div>
+
+                <!-- Content Row -->
+                <div class="row">
+                    <!-- Total Orders Card -->
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card dashboard-card border-left-primary h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                            Total Orders</div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalOrdersCount">0</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-shopping-bag fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pending Orders Card -->
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card dashboard-card border-left-warning h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                            Pending Orders</div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="pendingOrdersCount">0</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-clock fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Completed Orders Card -->
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card dashboard-card border-left-success h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                            Completed Orders</div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="completedOrdersCount">0</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Total Revenue Card -->
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card dashboard-card border-left-info h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                            Total Revenue</div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalRevenue">₦0</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-money-bill-wave fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content Row -->
+                <div class="row">
+                    <!-- Recent Orders -->
+                    <div class="col-xl-8 col-lg-7">
+                        <div class="card dashboard-card mb-4">
+                            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                                <h6 class="m-0 font-weight-bold text-primary">Recent Orders</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered" width="100%" cellspacing="0">
+                                        <thead>
+                                            <tr>
+                                                <th>Order ID</th>
+                                                <th>Customer</th>
+                                                <th>Amount</th>
+                                                <th>Status</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="recentOrdersTable">
+                                            <tr>
+                                                <td colspan="5" class="text-center">Loading orders...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Order Status Chart -->
+                    <div class="col-xl-4 col-lg-5">
+                        <div class="card dashboard-card mb-4">
+                            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                                <h6 class="m-0 font-weight-bold text-primary">Order Status Distribution</h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="orderStatusChart" width="100%" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Other sections (Orders, Menu Management, Reviews, Reports) would go here -->
+            <!-- These would follow the same pattern as the Dashboard section -->
+            
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/admin.js"></script>
+</body>
+</html>
