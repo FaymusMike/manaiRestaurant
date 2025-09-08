@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Place Order - Manai Restaurant</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top custom-navbar">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <span>Manai Restaurant</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="menu.html">Menu</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="order.html">Order</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="admin.html">Admin</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5 pt-5">
+        <h1 class="text-center mb-4">Place Your Order</h1>
+        
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="card shadow">
+                    <div class="card-body p-4">
+                        <form id="orderForm">
+                            <div class="mb-3">
+                                <label for="customerName" class="form-label">Full Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="customerName" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="customerPhone" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                                <input type="tel" class="form-control" id="customerPhone" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="customerAddress" class="form-label">Delivery Address <span class="text-danger">*</span></label>
+                                <textarea class="form-control" id="customerAddress" rows="2" required></textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="menuSelect" class="form-label">Select Menu Item <span class="text-danger">*</span></label>
+                                <select class="form-select" id="menuSelect" required>
+                                    <option value="" selected disabled>Choose a menu item</option>
+                                    <!-- Menu items will be populated dynamically -->
+                                </select>
+                            </div>
+                            
+                            <div id="menuDetails" class="mb-3 p-3 bg-light rounded d-none">
+                                <h5 id="selectedMenuName" class="text-primary"></h5>
+                                <p id="selectedMenuDescription" class="mb-2 text-muted"></p>
+                                <div class="row mt-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Size <span class="text-danger">*</span></label>
+                                        <div class="btn-group w-100" role="group" id="sizeOptions">
+                                            <!-- Size options will be populated dynamically -->
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="quantity" class="form-label">Quantity <span class="text-danger">*</span></label>
+                                        <input type="number" class="form-control" id="quantity" min="1" value="1" required>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <h5>Price: <span id="calculatedPrice" class="text-success">₦0.00</span></h5>
+                                </div>
+                            </div>
+                            
+                            <div id="paymentInfo" class="mb-3 p-3 bg-info bg-opacity-10 rounded d-none">
+                                <h5 class="mb-3">Payment Information</h5>
+                                <p>Please transfer <strong id="finalAmount" class="fs-4 text-success">₦0.00</strong> to:</p>
+                                <div class="alert alert-info">
+                                    <p class="mb-1"><strong>Bank:</strong> First Bank Nigeria</p>
+                                    <p class="mb-1"><strong>Account Name:</strong> Manai Restaurant</p>
+                                    <p class="mb-0"><strong>Account Number:</strong> 1234567890</p>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="paymentProof" class="form-label">Upload Payment Proof <span class="text-danger">*</span></label>
+                                    <input type="file" class="form-control" id="paymentProof" accept="image/*,.pdf" required>
+                                    <div class="form-text">Upload a screenshot or photo of your payment confirmation (JPEG, PNG, or PDF)</div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg py-3" id="submitOrder">
+                                    <i class="fas fa-paper-plane me-2"></i>Place Order
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <div id="orderConfirmation" class="alert alert-success mt-4 d-none fade-in">
+                    <div class="d-flex">
+                        <div class="me-3">
+                            <i class="fas fa-check-circle fa-2x text-success"></i>
+                        </div>
+                        <div>
+                            <h4 class="alert-heading">Order Placed Successfully!</h4>
+                            <p>Your order ID is: <strong id="orderId" class="fs-5"></strong></p>
+                            <p>Estimated delivery time: <strong id="deliveryTime" class="fs-5"></strong> minutes</p>
+                            <p>You will receive a confirmation call shortly.</p>
+                            <hr>
+                            <p class="mb-0">Thank you for choosing Manai Restaurant!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/order.js"></script>
+</body>
+</html>
