@@ -90,44 +90,48 @@ document.addEventListener('DOMContentLoaded', function() {
         const toggleSidebarBtn = document.getElementById('toggleSidebar');
         
         // Mobile sidebar toggle
-        sidebarToggle.addEventListener('click', function(e) {
-            e.preventDefault();
-            sidebar.classList.toggle('active');
-            contentWrapper.classList.toggle('active');
-        });
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                sidebar.classList.toggle('active');
+                contentWrapper.classList.toggle('active');
+            });
+        }
         
         // Desktop sidebar collapse
-        toggleSidebarBtn.addEventListener('click', function() {
-            isSidebarCollapsed = !isSidebarCollapsed;
-            
-            if (isSidebarCollapsed) {
-                sidebar.style.width = '80px';
-                contentWrapper.style.marginLeft = '80px';
-                toggleSidebarBtn.innerHTML = '<i class="fas fa-chevron-right"></i> Expand';
+        if (toggleSidebarBtn) {
+            toggleSidebarBtn.addEventListener('click', function() {
+                isSidebarCollapsed = !isSidebarCollapsed;
                 
-                // Hide text in sidebar
-                document.querySelectorAll('.nav-link span').forEach(el => {
-                    el.style.display = 'none';
-                });
-                
-                document.querySelectorAll('.sidebar-heading').forEach(el => {
-                    el.style.display = 'none';
-                });
-            } else {
-                sidebar.style.width = '250px';
-                contentWrapper.style.marginLeft = '250px';
-                toggleSidebarBtn.innerHTML = '<i class="fas fa-chevron-left"></i> Collapse';
-                
-                // Show text in sidebar
-                document.querySelectorAll('.nav-link span').forEach(el => {
-                    el.style.display = 'inline';
-                });
-                
-                document.querySelectorAll('.sidebar-heading').forEach(el => {
-                    el.style.display = 'block';
-                });
-            }
-        });
+                if (isSidebarCollapsed) {
+                    sidebar.style.width = '80px';
+                    contentWrapper.style.marginLeft = '80px';
+                    toggleSidebarBtn.innerHTML = '<i class="fas fa-chevron-right"></i> Expand';
+                    
+                    // Hide text in sidebar
+                    document.querySelectorAll('.nav-link span').forEach(el => {
+                        el.style.display = 'none';
+                    });
+                    
+                    document.querySelectorAll('.sidebar-heading').forEach(el => {
+                        el.style.display = 'none';
+                    });
+                } else {
+                    sidebar.style.width = '250px';
+                    contentWrapper.style.marginLeft = '250px';
+                    toggleSidebarBtn.innerHTML = '<i class="fas fa-chevron-left"></i> Collapse';
+                    
+                    // Show text in sidebar
+                    document.querySelectorAll('.nav-link span').forEach(el => {
+                        el.style.display = 'inline';
+                    });
+                    
+                    document.querySelectorAll('.sidebar-heading').forEach(el => {
+                        el.style.display = 'block';
+                    });
+                }
+            });
+        }
     }
     
     // Setup navigation between sections
@@ -219,6 +223,19 @@ document.addEventListener('DOMContentLoaded', function() {
         if (generateInvoiceBtn) {
             generateInvoiceBtn.addEventListener('click', generateInvoice);
         }
+        
+        // Generate report button
+        const generateReportBtn = document.getElementById('generateReportBtn');
+        if (generateReportBtn) {
+            generateReportBtn.addEventListener('click', function() {
+                // Switch to reports section
+                document.querySelectorAll('.nav-link[data-section]').forEach(link => link.classList.remove('active'));
+                document.querySelector('.nav-link[data-section="reports"]').classList.add('active');
+                
+                document.querySelectorAll('.admin-section').forEach(section => section.classList.add('d-none'));
+                document.getElementById('reports').classList.remove('d-none');
+            });
+        }
     }
     
     // Load orders from Firebase with real-time updates
@@ -307,7 +324,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <td>₦${order.totalPrice.toFixed(2)}</td>
                     <td>${formattedDate} ${formattedTime}</td>
                     <td><span class="badge order-status-badge bg-${getStatusColor(order.status)}">${order.status}</span></td>
-                    <td>
+                    <td class="action-buttons">
                         <button class="btn btn-sm btn-outline-primary view-order" data-id="${order.id}">
                             <i class="fas fa-eye"></i>
                         </button>
@@ -320,6 +337,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Populate recent orders table (only 5 most recent)
         if (recentOrdersTable) {
+            // Clear existing content
+            recentOrdersTable.innerHTML = '';
+            
             currentOrders.slice(0, 5).forEach(order => {
                 const orderDate = order.orderDate;
                 const formattedDate = orderDate.toLocaleDateString();
@@ -330,7 +350,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <td>${order.customerName}</td>
                     <td>₦${order.totalPrice.toFixed(2)}</td>
                     <td><span class="badge order-status-badge bg-${getStatusColor(order.status)}">${order.status}</span></td>
-                    <td>
+                    <td class="action-buttons">
                         <button class="btn btn-sm btn-outline-primary view-order" data-id="${order.id}">
                             <i class="fas fa-eye"></i>
                         </button>
@@ -376,7 +396,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     Large: ₦${item.prices.large}</small>
                 </td>
                 <td>${item.preparationTime} mins</td>
-                <td>
+                <td class="action-buttons">
                     <button class="btn btn-sm btn-outline-primary edit-item" data-id="${item.id}">
                         <i class="fas fa-edit"></i>
                     </button>
@@ -557,7 +577,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>₦${order.totalPrice.toFixed(2)}</td>
                 <td>${formattedDate} ${formattedTime}</td>
                 <td><span class="badge order-status-badge bg-${getStatusColor(order.status)}">${order.status}</span></td>
-                <td>
+                <td class="action-buttons">
                     <button class="btn btn-sm btn-outline-primary view-order" data-id="${order.id}">
                         <i class="fas fa-eye"></i>
                     </button>
@@ -581,7 +601,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const order = currentOrders.find(o => o.id === orderId);
         if (!order) return;
         
-        const modal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
+        const modalElement = document.getElementById('orderDetailsModal');
+        if (!modalElement) return;
+        
+        const modal = new bootstrap.Modal(modalElement);
         const orderDate = order.orderDate;
         
         // Populate order details
