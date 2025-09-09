@@ -15,13 +15,50 @@ document.addEventListener('DOMContentLoaded', function() {
     const requestedItem = urlParams.get('item');
     const requestedItemSize = urlParams.get('size');
     
-    // DOM Elements
-    const cartSidebar = document.getElementById('cartSidebar');
-    const cartOverlay = document.getElementById('cartOverlay');
-    const closeCartBtn = document.getElementById('closeCart');
-    const viewCartBtn = document.getElementById('viewCartBtn');
-    const cartButton = document.getElementById('cartButton');
-    const checkoutBtn = document.getElementById('checkoutBtn');
+    // DOM Elements - Wait for them to be available
+    let cartSidebar, cartOverlay, closeCartBtn, viewCartBtn, cartButton, checkoutBtn;
+    
+    // Initialize DOM elements after a short delay to ensure they're available
+    setTimeout(initializeDOMElements, 100);
+    
+    function initializeDOMElements() {
+        cartSidebar = document.getElementById('cartSidebar');
+        cartOverlay = document.getElementById('cartOverlay');
+        closeCartBtn = document.getElementById('closeCart');
+        viewCartBtn = document.getElementById('viewCartBtn');
+        cartButton = document.getElementById('cartButton');
+        checkoutBtn = document.getElementById('checkoutBtn');
+        
+        // Add event listeners only if elements exist
+        if (cartButton) {
+            cartButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                openCart();
+            });
+        }
+        
+        if (viewCartBtn) {
+            viewCartBtn.addEventListener('click', openCart);
+        }
+        
+        if (closeCartBtn) {
+            closeCartBtn.addEventListener('click', closeCart);
+        }
+        
+        if (cartOverlay) {
+            cartOverlay.addEventListener('click', closeCart);
+        }
+        
+        if (checkoutBtn) {
+            checkoutBtn.addEventListener('click', function() {
+                closeCart();
+                const paymentInfoSection = document.getElementById('paymentInfo');
+                if (paymentInfoSection) {
+                    paymentInfoSection.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        }
+    }
     
     // Show toast notification
     function showToast(message, type = 'info') {
@@ -70,30 +107,33 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Cart sidebar functionality
     function openCart() {
-        cartSidebar.classList.add('open');
-        cartOverlay.classList.add('open');
+        if (cartSidebar) {
+            cartSidebar.classList.add('open');
+        }
+        if (cartOverlay) {
+            cartOverlay.classList.add('open');
+        }
         document.body.style.overflow = 'hidden';
     }
     
     function closeCart() {
-        cartSidebar.classList.remove('open');
-        cartOverlay.classList.remove('open');
+        if (cartSidebar) {
+            cartSidebar.classList.remove('open');
+        }
+        if (cartOverlay) {
+            cartOverlay.classList.remove('open');
+        }
         document.body.style.overflow = 'auto';
     }
-    
-    // Event listeners for cart
-    cartButton.addEventListener('click', function(e) {
-        e.preventDefault();
-        openCart();
-    });
-    
-    viewCartBtn.addEventListener('click', openCart);
-    closeCartBtn.addEventListener('click', closeCart);
-    cartOverlay.addEventListener('click', closeCart);
     
     // Load menu items from Firebase
     function loadMenuItems() {
         const menuSelect = document.getElementById('menuSelect');
+        
+        if (!menuSelect) {
+            console.error('Menu select element not found');
+            return;
+        }
         
         // Clear existing options except the first one
         while (menuSelect.options.length > 1) {
@@ -110,7 +150,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // Get menu items from Firestore
         db.collection('menu').orderBy('name').get().then((querySnapshot) => {
             // Remove loading option
-            menuSelect.remove(menuSelect.options.length - 1);
+            if (menuSelect.options.length > 1) {
+                menuSelect.remove(menuSelect.options.length - 1);
+            }
             
             if (querySnapshot.empty) {
                 const noItemsOption = document.createElement('option');
@@ -153,7 +195,9 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }).catch((error) => {
             console.error("Error loading menu items: ", error);
-            menuSelect.remove(menuSelect.options.length - 1);
+            if (menuSelect.options.length > 1) {
+                menuSelect.remove(menuSelect.options.length - 1);
+            }
             
             const errorOption = document.createElement('option');
             errorOption.value = '';
@@ -175,25 +219,31 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Handle menu selection change
-    document.getElementById('menuSelect').addEventListener('change', function(e) {
-        const selectedOption = e.target.options[e.target.selectedIndex];
-        
-        if (e.target.value) {
-            // Get menu details from selected option
-            const menuItem = {
-                id: e.target.value,
-                name: selectedOption.text,
-                prices: JSON.parse(selectedOption.dataset.prices),
-                description: selectedOption.dataset.description,
-                preparationTime: selectedOption.dataset.preparationTime
-            };
+    const menuSelectElement = document.getElementById('menuSelect');
+    if (menuSelectElement) {
+        menuSelectElement.addEventListener('change', function(e) {
+            const selectedOption = e.target.options[e.target.selectedIndex];
             
-            selectedMenu = menuItem;
-            displayMenuDetails(selectedMenu);
-        } else {
-            document.getElementById('menuDetails').classList.add('d-none');
-        }
-    });
+            if (e.target.value) {
+                // Get menu details from selected option
+                const menuItem = {
+                    id: e.target.value,
+                    name: selectedOption.text,
+                    prices: JSON.parse(selectedOption.dataset.prices),
+                    description: selectedOption.dataset.description,
+                    preparationTime: selectedOption.dataset.preparationTime
+                };
+                
+                selectedMenu = menuItem;
+                displayMenuDetails(selectedMenu);
+            } else {
+                const menuDetails = document.getElementById('menuDetails');
+                if (menuDetails) {
+                    menuDetails.classList.add('d-none');
+                }
+            }
+        });
+    }
     
     // Display menu details and size options
     function displayMenuDetails(menuItem) {
@@ -201,6 +251,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedMenuName = document.getElementById('selectedMenuName');
         const selectedMenuDescription = document.getElementById('selectedMenuDescription');
         const sizeOptions = document.getElementById('sizeOptions');
+        
+        if (!menuDetails || !selectedMenuName || !selectedMenuDescription || !sizeOptions) {
+            console.error('Menu details elements not found');
+            return;
+        }
         
         // Set menu name and description
         selectedMenuName.textContent = menuItem.name;
@@ -255,7 +310,8 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        const quantity = parseInt(document.getElementById('quantity').value) || 1;
+        const quantityInput = document.getElementById('quantity');
+        const quantity = parseInt(quantityInput ? quantityInput.value : 1) || 1;
         const itemTotal = currentPrice * quantity;
         
         // Check if item already exists in cart
@@ -289,13 +345,15 @@ document.addEventListener('DOMContentLoaded', function() {
         updateCartUI();
         
         // Reset quantity
-        document.getElementById('quantity').value = 1;
+        if (quantityInput) {
+            quantityInput.value = 1;
+        }
         
         // Open cart sidebar
         openCart();
     }
     
-    // Update cart UI - FIXED VERSION
+    // Update cart UI - FIXED VERSION with null checks
     function updateCartUI() {
         const cartItemsContainer = document.getElementById('cartItemsContainer');
         const emptyCartMessage = document.getElementById('emptyCartMessage');
@@ -308,18 +366,32 @@ document.addEventListener('DOMContentLoaded', function() {
         const finalAmountElement = document.getElementById('finalAmount');
         const checkoutBtn = document.getElementById('checkoutBtn');
         
+        // Check if elements exist before manipulating them
+        if (!cartItemsContainer || !emptyCartMessage) {
+            console.error('Cart container elements not found');
+            return;
+        }
+        
         // Clear cart items
         cartItemsContainer.innerHTML = '';
         
         if (cartItems.length === 0) {
             emptyCartMessage.classList.remove('d-none');
-            cartSubtotalElement.textContent = '₦0.00';
-            deliveryFeeElement.textContent = '₦0.00';
-            cartTotalElement.textContent = '₦0.00';
-            mainCartTotalElement.textContent = '₦0.00';
-            cartCountElement.classList.add('d-none');
-            paymentInfoSection.classList.add('d-none');
-            checkoutBtn.disabled = true;
+            
+            // Safely update other elements if they exist
+            if (cartSubtotalElement) cartSubtotalElement.textContent = '₦0.00';
+            if (deliveryFeeElement) deliveryFeeElement.textContent = '₦0.00';
+            if (cartTotalElement) cartTotalElement.textContent = '₦0.00';
+            if (mainCartTotalElement) mainCartTotalElement.textContent = '₦0.00';
+            if (cartCountElement) {
+                cartCountElement.classList.add('d-none');
+            }
+            if (paymentInfoSection) {
+                paymentInfoSection.classList.add('d-none');
+            }
+            if (checkoutBtn) {
+                checkoutBtn.disabled = true;
+            }
             return;
         }
         
@@ -367,23 +439,29 @@ document.addEventListener('DOMContentLoaded', function() {
         const deliveryFee = cartSubtotal > 5000 ? 0 : DELIVERY_FEE;
         const cartTotal = cartSubtotal + deliveryFee;
         
-        // Update totals
-        cartSubtotalElement.textContent = `₦${cartSubtotal.toFixed(2)}`;
-        deliveryFeeElement.textContent = `₦${deliveryFee.toFixed(2)}`;
-        cartTotalElement.textContent = `₦${cartTotal.toFixed(2)}`;
-        mainCartTotalElement.textContent = `₦${cartTotal.toFixed(2)}`;
-        finalAmountElement.textContent = `₦${cartTotal.toFixed(2)}`;
+        // Safely update totals if elements exist
+        if (cartSubtotalElement) cartSubtotalElement.textContent = `₦${cartSubtotal.toFixed(2)}`;
+        if (deliveryFeeElement) deliveryFeeElement.textContent = `₦${deliveryFee.toFixed(2)}`;
+        if (cartTotalElement) cartTotalElement.textContent = `₦${cartTotal.toFixed(2)}`;
+        if (mainCartTotalElement) mainCartTotalElement.textContent = `₦${cartTotal.toFixed(2)}`;
+        if (finalAmountElement) finalAmountElement.textContent = `₦${cartTotal.toFixed(2)}`;
         
         // Update cart count
         const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-        cartCountElement.textContent = totalItems;
-        cartCountElement.classList.remove('d-none');
+        if (cartCountElement) {
+            cartCountElement.textContent = totalItems;
+            cartCountElement.classList.remove('d-none');
+        }
         
         // Show payment section if we have items
-        paymentInfoSection.classList.remove('d-none');
+        if (paymentInfoSection) {
+            paymentInfoSection.classList.remove('d-none');
+        }
         
         // Enable checkout button
-        checkoutBtn.disabled = false;
+        if (checkoutBtn) {
+            checkoutBtn.disabled = false;
+        }
         
         // Add event listeners to cart items
         addCartItemEventListeners();
@@ -464,17 +542,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Clear cart
-    function clearCart() {
-        if (cartItems.length === 0) return;
-        
-        if (confirm('Are you sure you want to clear your cart?')) {
-            cartItems = [];
-            updateCartUI();
-            showToast('Cart cleared', 'info');
-        }
-    }
-    
     // Generate random voucher
     function generateVoucher(orderTotal) {
         const voucherAmounts = [500, 200, 100, 50];
@@ -496,109 +563,150 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Handle form submission
-    document.getElementById('orderForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        // Validate form
-        if (cartItems.length === 0) {
-            showToast('Please add items to your cart first', 'warning');
-            return;
-        }
-        
-        const customerName = document.getElementById('customerName').value;
-        const customerPhone = document.getElementById('customerPhone').value;
-        const customerAddress = document.getElementById('customerAddress').value;
-        const paymentProof = document.getElementById('paymentProof').files[0];
-        
-        if (!paymentProof) {
-            showToast('Please upload payment proof', 'danger');
-            return;
-        }
-        
-        // Validate file size (max 2MB to avoid Firestore document size limits)
-        if (paymentProof.size > 2 * 1024 * 1024) {
-            showToast('Please upload a file smaller than 2MB', 'danger');
-            return;
-        }
-        
-        // Validate file type (images only)
-        const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-        if (!validImageTypes.includes(paymentProof.type)) {
-            showToast('Please upload a valid image file (JPEG, PNG, GIF, WebP)', 'danger');
-            return;
-        }
-        
-        // Disable submit button to prevent multiple submissions
-        const submitButton = document.getElementById('submitOrder');
-        submitButton.disabled = true;
-        submitButton.innerHTML = '<div class="loading-spinner"></div> Processing...';
-        
-        try {
-            // Convert image to Base64
-            const base64Image = await convertImageToBase64(paymentProof);
+    const orderForm = document.getElementById('orderForm');
+    if (orderForm) {
+        orderForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
             
-            // Calculate order total
-            const orderSubtotal = cartItems.reduce((total, item) => total + item.total, 0);
-            const deliveryFee = orderSubtotal > 5000 ? 0 : DELIVERY_FEE;
-            const orderTotal = orderSubtotal + deliveryFee;
-            
-            // Generate voucher
-            const voucher = generateVoucher(orderTotal);
-            
-            // Create order object with Base64 image
-            const order = {
-                customerName,
-                customerPhone,
-                customerAddress,
-                items: cartItems,
-                subtotal: orderSubtotal,
-                deliveryFee: deliveryFee,
-                total: orderTotal,
-                paymentProofBase64: base64Image,
-                paymentProofFilename: paymentProof.name,
-                status: 'pending',
-                orderDate: new Date(),
-                estimatedDelivery: 45, // Default delivery time
-                completed: false,
-                reviewProvided: false,
-                voucher: voucher
-            };
-            
-            // Save order to Firestore
-            const docRef = await db.collection('orders').add(order);
-            
-            // Show success message
-            document.getElementById('orderId').textContent = docRef.id;
-            document.getElementById('deliveryTime').textContent = order.estimatedDelivery;
-            document.getElementById('voucherCode').textContent = `${voucher.code} - ₦${voucher.amount} OFF`;
-            document.getElementById('orderConfirmation').classList.remove('d-none');
-            
-            // Hide form
-            document.getElementById('orderForm').classList.add('d-none');
-            
-            // Update progress steps
-            updateProgressSteps(2);
-            
-            // Show success toast
-            showToast('Order placed successfully!', 'success');
-            
-        } catch (error) {
-            console.error('Error processing order:', error);
-            
-            // Check if it's a Firebase error
-            if (error.code === 'permission-denied') {
-                showToast('Database permission error. Please contact support.', 'danger');
-            } else if (error.code === 'unavailable') {
-                showToast('Network error. Please check your connection and try again.', 'danger');
-            } else {
-                showToast('Failed to place order. Please try again.', 'danger');
+            // Validate form
+            if (cartItems.length === 0) {
+                showToast('Please add items to your cart first', 'warning');
+                return;
             }
             
-            // Re-enable submit button
-            submitButton.disabled = false;
-            submitButton.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Place Order';
-        }
-    });
+            const customerName = document.getElementById('customerName');
+            const customerPhone = document.getElementById('customerPhone');
+            const customerAddress = document.getElementById('customerAddress');
+            const paymentProof = document.getElementById('paymentProof');
+            
+            if (!customerName || !customerPhone || !customerAddress || !paymentProof) {
+                showToast('Please fill in all required fields', 'danger');
+                return;
+            }
+            
+            if (!paymentProof.files[0]) {
+                showToast('Please upload payment proof', 'danger');
+                return;
+            }
+            
+            const file = paymentProof.files[0];
+            
+            // Validate file size (max 2MB to avoid Firestore document size limits)
+            if (file.size > 2 * 1024 * 1024) {
+                showToast('Please upload a file smaller than 2MB', 'danger');
+                return;
+            }
+            
+            // Validate file type (images only)
+            const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            if (!validImageTypes.includes(file.type)) {
+                showToast('Please upload a valid image file (JPEG, PNG, GIF, WebP)', 'danger');
+                return;
+            }
+            
+            // Disable submit button to prevent multiple submissions
+            const submitButton = document.getElementById('submitOrder');
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<div class="loading-spinner"></div> Processing...';
+            }
+            
+            try {
+                // Convert image to Base64
+                const base64Image = await convertImageToBase64(file);
+                
+                // Calculate order total
+                const orderSubtotal = cartItems.reduce((total, item) => total + item.total, 0);
+                const deliveryFee = orderSubtotal > 5000 ? 0 : DELIVERY_FEE;
+                const orderTotal = orderSubtotal + deliveryFee;
+                
+                // Generate voucher
+                const voucher = generateVoucher(orderTotal);
+                
+                // Create order object with Base64 image
+                const order = {
+                    customerName: customerName.value,
+                    customerPhone: customerPhone.value,
+                    customerAddress: customerAddress.value,
+                    items: cartItems,
+                    subtotal: orderSubtotal,
+                    deliveryFee: deliveryFee,
+                    total: orderTotal,
+                    paymentProofBase64: base64Image,
+                    paymentProofFilename: file.name,
+                    status: 'pending',
+                    orderDate: new Date(),
+                    estimatedDelivery: 45, // Default delivery time
+                    completed: false,
+                    reviewProvided: false,
+                    voucher: voucher
+                };
+                
+                // Save order to Firestore
+                const docRef = await db.collection('orders').add(order);
+                
+                // Show success message
+                const orderIdElement = document.getElementById('orderId');
+                const deliveryTimeElement = document.getElementById('deliveryTime');
+                const voucherCodeElement = document.getElementById('voucherCode');
+                const orderConfirmation = document.getElementById('orderConfirmation');
+                const orderFormElement = document.getElementById('orderForm');
+                
+                if (orderIdElement) orderIdElement.textContent = docRef.id;
+                if (deliveryTimeElement) deliveryTimeElement.textContent = order.estimatedDelivery;
+                if (voucherCodeElement) voucherCodeElement.textContent = `${voucher.code} - ₦${voucher.amount} OFF`;
+                if (orderConfirmation) orderConfirmation.classList.remove('d-none');
+                if (orderFormElement) orderFormElement.classList.add('d-none');
+                
+                // Update progress steps
+                updateProgressSteps(2);
+                
+                // Show success toast
+                showToast('Order placed successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Error processing order:', error);
+                
+                // Check if it's a Firebase error
+                if (error.code === 'permission-denied') {
+                    showToast('Database permission error. Please contact support.', 'danger');
+                } else if (error.code === 'unavailable') {
+                    showToast('Network error. Please check your connection and try again.', 'danger');
+                } else {
+                    showToast('Failed to place order. Please try again.', 'danger');
+                }
+                
+                // Re-enable submit button
+                const submitButton = document.getElementById('submitOrder');
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Place Order';
+                }
+            }
+        });
+    }
+    
+    // Add to cart button event listener
+    const addToCartBtn = document.getElementById('addToCartBtn');
+    if (addToCartBtn) {
+        addToCartBtn.addEventListener('click', addToCart);
+    }
+    
+    // Copy Order ID functionality
+    const copyOrderIdBtn = document.getElementById('copyOrderIdBtn');
+    if (copyOrderIdBtn) {
+        copyOrderIdBtn.addEventListener('click', function() {
+            const orderId = document.getElementById('orderId');
+            if (orderId && orderId.textContent) {
+                navigator.clipboard.writeText(orderId.textContent).then(() => {
+                    showToast('Order ID copied to clipboard', 'success');
+                }).catch(err => {
+                    console.error('Failed to copy: ', err);
+                    showToast('Failed to copy Order ID', 'danger');
+                });
+            }
+        });
+    }
     
     // Convert image to Base64
     function convertImageToBase64(file) {
@@ -612,7 +720,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Update progress steps
     function updateProgressSteps(activeStep) {
-        document.querySelectorAll('.order-step').forEach((step, index) => {
+        const steps = document.querySelectorAll('.order-step');
+        if (steps.length === 0) return;
+        
+        steps.forEach((step, index) => {
             step.classList.remove('step-active', 'step-completed');
             
             if (index < activeStep) {
@@ -624,47 +735,39 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Image preview functionality
-    document.getElementById('paymentProof').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        const preview = document.getElementById('uploadPreview');
-        const previewImage = document.getElementById('previewImage');
-        
-        if (file) {
-            const reader = new FileReader();
+    const paymentProofInput = document.getElementById('paymentProof');
+    if (paymentProofInput) {
+        paymentProofInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const preview = document.getElementById('uploadPreview');
+            const previewImage = document.getElementById('previewImage');
             
-            reader.onload = function(e) {
-                previewImage.src = e.target.result;
-                preview.classList.remove('d-none');
+            if (file && preview && previewImage) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    previewImage.src = e.target.result;
+                    preview.classList.remove('d-none');
+                };
+                
+                reader.readAsDataURL(file);
+            } else if (preview) {
+                preview.classList.add('d-none');
             }
-            
-            reader.readAsDataURL(file);
-        } else {
-            preview.classList.add('d-none');
-        }
-    });
+        });
+    }
     
     // Remove image functionality
-    document.getElementById('removeImage').addEventListener('click', function() {
-        document.getElementById('paymentProof').value = '';
-        document.getElementById('uploadPreview').classList.add('d-none');
-    });
-    
-    // Copy Order ID functionality
-    document.getElementById('copyOrderIdBtn').addEventListener('click', function() {
-        const orderId = document.getElementById('orderId').textContent;
-        navigator.clipboard.writeText(orderId).then(() => {
-            showToast('Order ID copied to clipboard', 'success');
+    const removeImageBtn = document.getElementById('removeImage');
+    if (removeImageBtn) {
+        removeImageBtn.addEventListener('click', function() {
+            const paymentProof = document.getElementById('paymentProof');
+            const preview = document.getElementById('uploadPreview');
+            
+            if (paymentProof) paymentProof.value = '';
+            if (preview) preview.classList.add('d-none');
         });
-    });
-    
-    // Checkout button functionality
-    checkoutBtn.addEventListener('click', function() {
-        closeCart();
-        document.getElementById('paymentInfo').scrollIntoView({ behavior: 'smooth' });
-    });
-    
-    // Event listeners
-    document.getElementById('addToCartBtn').addEventListener('click', addToCart);
+    }
     
     // Initialize page
     loadMenuItems();
