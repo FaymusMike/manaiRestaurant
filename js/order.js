@@ -15,21 +15,46 @@ document.addEventListener('DOMContentLoaded', function() {
     const requestedItem = urlParams.get('item');
     const requestedItemSize = urlParams.get('size');
     
-    // DOM Elements - Wait for them to be available
+    // DOM Elements
     let cartSidebar, cartOverlay, closeCartBtn, viewCartBtn, cartButton, checkoutBtn;
-    
-    // Initialize DOM elements after a short delay to ensure they're available
-    setTimeout(initializeDOMElements, 100);
-    
-    function initializeDOMElements() {
+    let cartItemsContainer, emptyCartMessage, cartSubtotalElement, deliveryFeeElement;
+    let cartTotalElement, mainCartTotalElement, cartCountElement, paymentInfoSection;
+    let finalAmountElement;
+
+    // Initialize all DOM elements
+    function initializeAllDOMElements() {
+        // Main page elements
+        cartButton = document.getElementById('cartButton');
+        viewCartBtn = document.getElementById('viewCartBtn');
+        paymentInfoSection = document.getElementById('paymentInfo');
+        finalAmountElement = document.getElementById('finalAmount');
+        mainCartTotalElement = document.getElementById('mainCartTotal');
+        cartCountElement = document.getElementById('cartCount');
+        
+        // Sidebar elements
         cartSidebar = document.getElementById('cartSidebar');
         cartOverlay = document.getElementById('cartOverlay');
         closeCartBtn = document.getElementById('closeCart');
-        viewCartBtn = document.getElementById('viewCartBtn');
-        cartButton = document.getElementById('cartButton');
         checkoutBtn = document.getElementById('checkoutBtn');
+        cartItemsContainer = document.getElementById('cartItemsContainer');
+        emptyCartMessage = document.getElementById('emptyCartMessage');
+        cartSubtotalElement = document.getElementById('cartSubtotal');
+        deliveryFeeElement = document.getElementById('deliveryFee');
+        cartTotalElement = document.getElementById('cartTotal');
         
-        // Add event listeners only if elements exist
+        console.log('Cart elements initialized:', {
+            cartItemsContainer: !!cartItemsContainer,
+            emptyCartMessage: !!emptyCartMessage,
+            cartSidebar: !!cartSidebar
+        });
+        
+        // Add event listeners
+        setupEventListeners();
+    }
+    
+    // Set up all event listeners
+    function setupEventListeners() {
+        // Cart functionality
         if (cartButton) {
             cartButton.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -52,11 +77,46 @@ document.addEventListener('DOMContentLoaded', function() {
         if (checkoutBtn) {
             checkoutBtn.addEventListener('click', function() {
                 closeCart();
-                const paymentInfoSection = document.getElementById('paymentInfo');
                 if (paymentInfoSection) {
                     paymentInfoSection.scrollIntoView({ behavior: 'smooth' });
                 }
             });
+        }
+        
+        // Add to cart button
+        const addToCartBtn = document.getElementById('addToCartBtn');
+        if (addToCartBtn) {
+            addToCartBtn.addEventListener('click', addToCart);
+        }
+        
+        // Form submission
+        const orderForm = document.getElementById('orderForm');
+        if (orderForm) {
+            orderForm.addEventListener('submit', handleOrderSubmission);
+        }
+        
+        // Copy Order ID
+        const copyOrderIdBtn = document.getElementById('copyOrderIdBtn');
+        if (copyOrderIdBtn) {
+            copyOrderIdBtn.addEventListener('click', copyOrderId);
+        }
+        
+        // Image handling
+        const paymentProofInput = document.getElementById('paymentProof');
+        const removeImageBtn = document.getElementById('removeImage');
+        
+        if (paymentProofInput) {
+            paymentProofInput.addEventListener('change', handleImagePreview);
+        }
+        
+        if (removeImageBtn) {
+            removeImageBtn.addEventListener('click', removeImage);
+        }
+        
+        // Menu selection
+        const menuSelectElement = document.getElementById('menuSelect');
+        if (menuSelectElement) {
+            menuSelectElement.addEventListener('change', handleMenuSelection);
         }
     }
     
@@ -173,7 +233,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 option.dataset.preparationTime = menuItem.preparationTime;
                 menuSelect.appendChild(option);
                 
-                // If this is the requested item, select it and auto-add to cart
+                // If this is the requested item, select it
                 if (requestedItem && doc.id === requestedItem) {
                     menuSelect.value = doc.id;
                     triggerEvent(menuSelect, 'change');
@@ -219,33 +279,30 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Handle menu selection change
-    const menuSelectElement = document.getElementById('menuSelect');
-    if (menuSelectElement) {
-        menuSelectElement.addEventListener('change', function(e) {
-            const selectedOption = e.target.options[e.target.selectedIndex];
+    function handleMenuSelection(e) {
+        const selectedOption = e.target.options[e.target.selectedIndex];
+        
+        if (e.target.value) {
+            // Get menu details from selected option
+            const menuItem = {
+                id: e.target.value,
+                name: selectedOption.text,
+                prices: JSON.parse(selectedOption.dataset.prices),
+                description: selectedOption.dataset.description,
+                preparationTime: selectedOption.dataset.preparationTime
+            };
             
-            if (e.target.value) {
-                // Get menu details from selected option
-                const menuItem = {
-                    id: e.target.value,
-                    name: selectedOption.text,
-                    prices: JSON.parse(selectedOption.dataset.prices),
-                    description: selectedOption.dataset.description,
-                    preparationTime: selectedOption.dataset.preparationTime
-                };
-                
-                selectedMenu = menuItem;
-                displayMenuDetails(selectedMenu);
-            } else {
-                const menuDetails = document.getElementById('menuDetails');
-                if (menuDetails) {
-                    menuDetails.classList.add('d-none');
-                }
+            selectedMenu = menuItem;
+            displayMenuDetails(selectedMenu);
+        } else {
+            const menuDetails = document.getElementById('menuDetails');
+            if (menuDetails) {
+                menuDetails.classList.add('d-none');
             }
-        });
+        }
     }
     
-    // Display menu details and size options
+    // Display menu details and size options - FIXED FOR MOBILE
     function displayMenuDetails(menuItem) {
         const menuDetails = document.getElementById('menuDetails');
         const selectedMenuName = document.getElementById('selectedMenuName');
@@ -264,12 +321,17 @@ document.addEventListener('DOMContentLoaded', function() {
         // Clear existing size options
         sizeOptions.innerHTML = '';
         
-        // Add size options
+        // Add size options - improved for mobile
         Object.keys(menuItem.prices).forEach(size => {
             const button = document.createElement('button');
             button.type = 'button';
-            button.className = 'btn btn-outline-primary size-option';
-            button.textContent = `${size.charAt(0).toUpperCase() + size.slice(1)} (₦${menuItem.prices[size]})`;
+            button.className = 'btn btn-outline-primary size-option mb-2';
+            button.innerHTML = `
+                <span class="d-none d-md-inline">${size.charAt(0).toUpperCase() + size.slice(1)}</span>
+                <span class="d-md-none">${size.charAt(0).toUpperCase()}</span>
+                <br>
+                <small>₦${menuItem.prices[size]}</small>
+            `;
             button.dataset.size = size;
             button.dataset.price = menuItem.prices[size];
             
@@ -291,19 +353,21 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Auto-select medium size if available
-        const mediumButton = sizeOptions.querySelector('[data-size="medium"]');
-        if (mediumButton) {
-            mediumButton.click();
-        } else if (sizeOptions.firstChild) {
-            // Select the first available size
-            sizeOptions.firstChild.click();
-        }
+        setTimeout(() => {
+            const mediumButton = sizeOptions.querySelector('[data-size="medium"]');
+            if (mediumButton) {
+                mediumButton.click();
+            } else if (sizeOptions.firstChild) {
+                // Select the first available size
+                sizeOptions.firstChild.click();
+            }
+        }, 100);
         
         // Show menu details
         menuDetails.classList.remove('d-none');
     }
     
-    // Add to cart functionality - FIXED VERSION
+    // Add to cart functionality
     function addToCart() {
         if (!selectedMenu || !selectedSize) {
             showToast('Please select a menu item and size', 'warning');
@@ -353,23 +417,20 @@ document.addEventListener('DOMContentLoaded', function() {
         openCart();
     }
     
-    // Update cart UI - FIXED VERSION with null checks
+    // Update cart UI - FIXED VERSION
     function updateCartUI() {
-        const cartItemsContainer = document.getElementById('cartItemsContainer');
-        const emptyCartMessage = document.getElementById('emptyCartMessage');
-        const cartSubtotalElement = document.getElementById('cartSubtotal');
-        const deliveryFeeElement = document.getElementById('deliveryFee');
-        const cartTotalElement = document.getElementById('cartTotal');
-        const mainCartTotalElement = document.getElementById('mainCartTotal');
-        const cartCountElement = document.getElementById('cartCount');
-        const paymentInfoSection = document.getElementById('paymentInfo');
-        const finalAmountElement = document.getElementById('finalAmount');
-        const checkoutBtn = document.getElementById('checkoutBtn');
+        console.log('Updating cart UI, items:', cartItems.length);
         
-        // Check if elements exist before manipulating them
+        // Check if cart container elements exist
         if (!cartItemsContainer || !emptyCartMessage) {
-            console.error('Cart container elements not found');
-            return;
+            console.log('Cart container not found, attempting to reinitialize...');
+            initializeAllDOMElements();
+            
+            // If still not found after reinitialization, wait a bit and try again
+            if (!cartItemsContainer || !emptyCartMessage) {
+                console.error('Cart container elements still not found after reinitialization');
+                return;
+            }
         }
         
         // Clear cart items
@@ -378,11 +439,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (cartItems.length === 0) {
             emptyCartMessage.classList.remove('d-none');
             
-            // Safely update other elements if they exist
-            if (cartSubtotalElement) cartSubtotalElement.textContent = '₦0.00';
-            if (deliveryFeeElement) deliveryFeeElement.textContent = '₦0.00';
-            if (cartTotalElement) cartTotalElement.textContent = '₦0.00';
-            if (mainCartTotalElement) mainCartTotalElement.textContent = '₦0.00';
+            // Update other elements if they exist
+            updateCartTotals(0, 0, 0);
+            
             if (cartCountElement) {
                 cartCountElement.classList.add('d-none');
             }
@@ -409,11 +468,11 @@ document.addEventListener('DOMContentLoaded', function() {
             cartItemElement.innerHTML = `
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-2">
-                        <div>
+                        <div class="flex-grow-1">
                             <h6 class="mb-0">${item.name}</h6>
                             <small class="text-muted">Size: ${item.size}</small>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-danger remove-from-cart" data-id="${item.id}">
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-from-cart ms-2" data-id="${item.id}">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -424,7 +483,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <input type="number" class="quantity-input" value="${item.quantity}" min="1" data-id="${item.id}">
                             <button class="quantity-btn increase-quantity" data-id="${item.id}">+</button>
                         </div>
-                        <div class="text-end">
+                        <div class="text-end ms-3">
                             <div class="fw-bold">₦${item.total.toFixed(2)}</div>
                             <small class="text-muted">₦${item.price.toFixed(2)} each</small>
                         </div>
@@ -439,12 +498,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const deliveryFee = cartSubtotal > 5000 ? 0 : DELIVERY_FEE;
         const cartTotal = cartSubtotal + deliveryFee;
         
-        // Safely update totals if elements exist
-        if (cartSubtotalElement) cartSubtotalElement.textContent = `₦${cartSubtotal.toFixed(2)}`;
-        if (deliveryFeeElement) deliveryFeeElement.textContent = `₦${deliveryFee.toFixed(2)}`;
-        if (cartTotalElement) cartTotalElement.textContent = `₦${cartTotal.toFixed(2)}`;
-        if (mainCartTotalElement) mainCartTotalElement.textContent = `₦${cartTotal.toFixed(2)}`;
-        if (finalAmountElement) finalAmountElement.textContent = `₦${cartTotal.toFixed(2)}`;
+        // Update totals
+        updateCartTotals(cartSubtotal, deliveryFee, cartTotal);
         
         // Update cart count
         const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -465,6 +520,15 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Add event listeners to cart items
         addCartItemEventListeners();
+    }
+    
+    // Update cart totals
+    function updateCartTotals(subtotal, deliveryFee, total) {
+        if (cartSubtotalElement) cartSubtotalElement.textContent = `₦${subtotal.toFixed(2)}`;
+        if (deliveryFeeElement) deliveryFeeElement.textContent = `₦${deliveryFee.toFixed(2)}`;
+        if (cartTotalElement) cartTotalElement.textContent = `₦${total.toFixed(2)}`;
+        if (mainCartTotalElement) mainCartTotalElement.textContent = `₦${total.toFixed(2)}`;
+        if (finalAmountElement) finalAmountElement.textContent = `₦${total.toFixed(2)}`;
     }
     
     // Add event listeners to cart items
@@ -542,6 +606,127 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+    // Handle order submission
+    async function handleOrderSubmission(e) {
+        e.preventDefault();
+        
+        // Validate form
+        if (cartItems.length === 0) {
+            showToast('Please add items to your cart first', 'warning');
+            return;
+        }
+        
+        const customerName = document.getElementById('customerName');
+        const customerPhone = document.getElementById('customerPhone');
+        const customerAddress = document.getElementById('customerAddress');
+        const paymentProof = document.getElementById('paymentProof');
+        
+        if (!customerName || !customerPhone || !customerAddress || !paymentProof) {
+            showToast('Please fill in all required fields', 'danger');
+            return;
+        }
+        
+        if (!paymentProof.files[0]) {
+            showToast('Please upload payment proof', 'danger');
+            return;
+        }
+        
+        const file = paymentProof.files[0];
+        
+        // Validate file size (max 2MB to avoid Firestore document size limits)
+        if (file.size > 2 * 1024 * 1024) {
+            showToast('Please upload a file smaller than 2MB', 'danger');
+            return;
+        }
+        
+        // Validate file type (images only)
+        const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        if (!validImageTypes.includes(file.type)) {
+            showToast('Please upload a valid image file (JPEG, PNG, GIF, WebP)', 'danger');
+            return;
+        }
+        
+        // Disable submit button to prevent multiple submissions
+        const submitButton = document.getElementById('submitOrder');
+        if (submitButton) {
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<div class="loading-spinner"></div> Processing...';
+        }
+        
+        try {
+            // Convert image to Base64
+            const base64Image = await convertImageToBase64(file);
+            
+            // Calculate order total
+            const orderSubtotal = cartItems.reduce((total, item) => total + item.total, 0);
+            const deliveryFee = orderSubtotal > 5000 ? 0 : DELIVERY_FEE;
+            const orderTotal = orderSubtotal + deliveryFee;
+            
+            // Generate voucher
+            const voucher = generateVoucher(orderTotal);
+            
+            // Create order object with Base64 image
+            const order = {
+                customerName: customerName.value,
+                customerPhone: customerPhone.value,
+                customerAddress: customerAddress.value,
+                items: cartItems,
+                subtotal: orderSubtotal,
+                deliveryFee: deliveryFee,
+                total: orderTotal,
+                paymentProofBase64: base64Image,
+                paymentProofFilename: file.name,
+                status: 'pending',
+                orderDate: new Date(),
+                estimatedDelivery: 45, // Default delivery time
+                completed: false,
+                reviewProvided: false,
+                voucher: voucher
+            };
+            
+            // Save order to Firestore
+            const docRef = await db.collection('orders').add(order);
+            
+            // Show success message
+            const orderIdElement = document.getElementById('orderId');
+            const deliveryTimeElement = document.getElementById('deliveryTime');
+            const voucherCodeElement = document.getElementById('voucherCode');
+            const orderConfirmation = document.getElementById('orderConfirmation');
+            const orderFormElement = document.getElementById('orderForm');
+            
+            if (orderIdElement) orderIdElement.textContent = docRef.id;
+            if (deliveryTimeElement) deliveryTimeElement.textContent = order.estimatedDelivery;
+            if (voucherCodeElement) voucherCodeElement.textContent = `${voucher.code} - ₦${voucher.amount} OFF`;
+            if (orderConfirmation) orderConfirmation.classList.remove('d-none');
+            if (orderFormElement) orderFormElement.classList.add('d-none');
+            
+            // Update progress steps
+            updateProgressSteps(2);
+            
+            // Show success toast
+            showToast('Order placed successfully!', 'success');
+            
+        } catch (error) {
+            console.error('Error processing order:', error);
+            
+            // Check if it's a Firebase error
+            if (error.code === 'permission-denied') {
+                showToast('Database permission error. Please contact support.', 'danger');
+            } else if (error.code === 'unavailable') {
+                showToast('Network error. Please check your connection and try again.', 'danger');
+            } else {
+                showToast('Failed to place order. Please try again.', 'danger');
+            }
+            
+            // Re-enable submit button
+            const submitButton = document.getElementById('submitOrder');
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Place Order';
+            }
+        }
+    }
+    
     // Generate random voucher
     function generateVoucher(orderTotal) {
         const voucherAmounts = [500, 200, 100, 50];
@@ -562,150 +747,46 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
     
-    // Handle form submission
-    const orderForm = document.getElementById('orderForm');
-    if (orderForm) {
-        orderForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            // Validate form
-            if (cartItems.length === 0) {
-                showToast('Please add items to your cart first', 'warning');
-                return;
-            }
-            
-            const customerName = document.getElementById('customerName');
-            const customerPhone = document.getElementById('customerPhone');
-            const customerAddress = document.getElementById('customerAddress');
-            const paymentProof = document.getElementById('paymentProof');
-            
-            if (!customerName || !customerPhone || !customerAddress || !paymentProof) {
-                showToast('Please fill in all required fields', 'danger');
-                return;
-            }
-            
-            if (!paymentProof.files[0]) {
-                showToast('Please upload payment proof', 'danger');
-                return;
-            }
-            
-            const file = paymentProof.files[0];
-            
-            // Validate file size (max 2MB to avoid Firestore document size limits)
-            if (file.size > 2 * 1024 * 1024) {
-                showToast('Please upload a file smaller than 2MB', 'danger');
-                return;
-            }
-            
-            // Validate file type (images only)
-            const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-            if (!validImageTypes.includes(file.type)) {
-                showToast('Please upload a valid image file (JPEG, PNG, GIF, WebP)', 'danger');
-                return;
-            }
-            
-            // Disable submit button to prevent multiple submissions
-            const submitButton = document.getElementById('submitOrder');
-            if (submitButton) {
-                submitButton.disabled = true;
-                submitButton.innerHTML = '<div class="loading-spinner"></div> Processing...';
-            }
-            
-            try {
-                // Convert image to Base64
-                const base64Image = await convertImageToBase64(file);
-                
-                // Calculate order total
-                const orderSubtotal = cartItems.reduce((total, item) => total + item.total, 0);
-                const deliveryFee = orderSubtotal > 5000 ? 0 : DELIVERY_FEE;
-                const orderTotal = orderSubtotal + deliveryFee;
-                
-                // Generate voucher
-                const voucher = generateVoucher(orderTotal);
-                
-                // Create order object with Base64 image
-                const order = {
-                    customerName: customerName.value,
-                    customerPhone: customerPhone.value,
-                    customerAddress: customerAddress.value,
-                    items: cartItems,
-                    subtotal: orderSubtotal,
-                    deliveryFee: deliveryFee,
-                    total: orderTotal,
-                    paymentProofBase64: base64Image,
-                    paymentProofFilename: file.name,
-                    status: 'pending',
-                    orderDate: new Date(),
-                    estimatedDelivery: 45, // Default delivery time
-                    completed: false,
-                    reviewProvided: false,
-                    voucher: voucher
-                };
-                
-                // Save order to Firestore
-                const docRef = await db.collection('orders').add(order);
-                
-                // Show success message
-                const orderIdElement = document.getElementById('orderId');
-                const deliveryTimeElement = document.getElementById('deliveryTime');
-                const voucherCodeElement = document.getElementById('voucherCode');
-                const orderConfirmation = document.getElementById('orderConfirmation');
-                const orderFormElement = document.getElementById('orderForm');
-                
-                if (orderIdElement) orderIdElement.textContent = docRef.id;
-                if (deliveryTimeElement) deliveryTimeElement.textContent = order.estimatedDelivery;
-                if (voucherCodeElement) voucherCodeElement.textContent = `${voucher.code} - ₦${voucher.amount} OFF`;
-                if (orderConfirmation) orderConfirmation.classList.remove('d-none');
-                if (orderFormElement) orderFormElement.classList.add('d-none');
-                
-                // Update progress steps
-                updateProgressSteps(2);
-                
-                // Show success toast
-                showToast('Order placed successfully!', 'success');
-                
-            } catch (error) {
-                console.error('Error processing order:', error);
-                
-                // Check if it's a Firebase error
-                if (error.code === 'permission-denied') {
-                    showToast('Database permission error. Please contact support.', 'danger');
-                } else if (error.code === 'unavailable') {
-                    showToast('Network error. Please check your connection and try again.', 'danger');
-                } else {
-                    showToast('Failed to place order. Please try again.', 'danger');
-                }
-                
-                // Re-enable submit button
-                const submitButton = document.getElementById('submitOrder');
-                if (submitButton) {
-                    submitButton.disabled = false;
-                    submitButton.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Place Order';
-                }
-            }
-        });
-    }
-    
-    // Add to cart button event listener
-    const addToCartBtn = document.getElementById('addToCartBtn');
-    if (addToCartBtn) {
-        addToCartBtn.addEventListener('click', addToCart);
-    }
-    
     // Copy Order ID functionality
-    const copyOrderIdBtn = document.getElementById('copyOrderIdBtn');
-    if (copyOrderIdBtn) {
-        copyOrderIdBtn.addEventListener('click', function() {
-            const orderId = document.getElementById('orderId');
-            if (orderId && orderId.textContent) {
-                navigator.clipboard.writeText(orderId.textContent).then(() => {
-                    showToast('Order ID copied to clipboard', 'success');
-                }).catch(err => {
-                    console.error('Failed to copy: ', err);
-                    showToast('Failed to copy Order ID', 'danger');
-                });
-            }
-        });
+    function copyOrderId() {
+        const orderId = document.getElementById('orderId');
+        if (orderId && orderId.textContent) {
+            navigator.clipboard.writeText(orderId.textContent).then(() => {
+                showToast('Order ID copied to clipboard', 'success');
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                showToast('Failed to copy Order ID', 'danger');
+            });
+        }
+    }
+    
+    // Handle image preview
+    function handleImagePreview(e) {
+        const file = e.target.files[0];
+        const preview = document.getElementById('uploadPreview');
+        const previewImage = document.getElementById('previewImage');
+        
+        if (file && preview && previewImage) {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                previewImage.src = e.target.result;
+                preview.classList.remove('d-none');
+            };
+            
+            reader.readAsDataURL(file);
+        } else if (preview) {
+            preview.classList.add('d-none');
+        }
+    }
+    
+    // Remove image
+    function removeImage() {
+        const paymentProof = document.getElementById('paymentProof');
+        const preview = document.getElementById('uploadPreview');
+        
+        if (paymentProof) paymentProof.value = '';
+        if (preview) preview.classList.add('d-none');
     }
     
     // Convert image to Base64
@@ -734,43 +815,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Image preview functionality
-    const paymentProofInput = document.getElementById('paymentProof');
-    if (paymentProofInput) {
-        paymentProofInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            const preview = document.getElementById('uploadPreview');
-            const previewImage = document.getElementById('previewImage');
-            
-            if (file && preview && previewImage) {
-                const reader = new FileReader();
-                
-                reader.onload = function(e) {
-                    previewImage.src = e.target.result;
-                    preview.classList.remove('d-none');
-                };
-                
-                reader.readAsDataURL(file);
-            } else if (preview) {
-                preview.classList.add('d-none');
-            }
-        });
+    // Initialize everything
+    function initializeApp() {
+        initializeAllDOMElements();
+        loadMenuItems();
+        updateProgressSteps(0);
+        updateCartUI();
     }
     
-    // Remove image functionality
-    const removeImageBtn = document.getElementById('removeImage');
-    if (removeImageBtn) {
-        removeImageBtn.addEventListener('click', function() {
-            const paymentProof = document.getElementById('paymentProof');
-            const preview = document.getElementById('uploadPreview');
-            
-            if (paymentProof) paymentProof.value = '';
-            if (preview) preview.classList.add('d-none');
-        });
-    }
-    
-    // Initialize page
-    loadMenuItems();
-    updateProgressSteps(0);
-    updateCartUI();
+    // Start the app
+    initializeApp();
 });

@@ -361,3 +361,137 @@ img {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* Mobile Responsive Improvements */
+@media (max-width: 768px) {
+    /* Size options - improved for mobile */
+    #sizeOptions .btn {
+        padding: 0.5rem;
+        font-size: 0.8rem;
+        margin: 0.2rem;
+    }
+    
+    #sizeOptions .btn small {
+        font-size: 0.7rem;
+    }
+    
+    /* Quantity controls */
+    .quantity-controls {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .quantity-btn {
+        width: 25px;
+        height: 25px;
+        font-size: 0.8rem;
+    }
+    
+    .quantity-input {
+        width: 35px;
+        font-size: 0.8rem;
+    }
+    
+    /* Cart items */
+    .cart-item .card-body {
+        padding: 0.75rem;
+    }
+    
+    .cart-item h6 {
+        font-size: 0.9rem;
+    }
+    
+    /* Form layout */
+    .col-md-6 {
+        margin-bottom: 1.5rem;
+    }
+    
+    /* Buttons */
+    .btn {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    /* Order progress */
+    .order-step {
+        flex: none;
+        width: 100%;
+        text-align: left;
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .step-number {
+        margin-right: 0.5rem;
+        margin-bottom: 0;
+    }
+    
+    .order-progress:before {
+        display: none;
+    }
+}
+
+/* Additional mobile fixes */
+@media (max-width: 576px) {
+    /* Container padding */
+    .container {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    
+    /* Card padding */
+    .card-body {
+        padding: 1rem;
+    }
+    
+    /* Form elements */
+    .form-control, .form-select {
+        font-size: 16px; /* Prevent zoom on iOS */
+    }
+    
+    /* Button sizes */
+    .btn-lg {
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+    }
+    
+    /* Cart sidebar */
+    .cart-sidebar {
+        width: 100%;
+    }
+    
+    /* Bank details */
+    .bank-details {
+        padding: 1rem;
+    }
+    
+    .bank-details .row > div {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Ensure all elements are visible */
+#cartItemsContainer, #emptyCartMessage, 
+#cartSubtotal, #deliveryFee, #cartTotal {
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Loading states */
+.loading-spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 0.5rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
