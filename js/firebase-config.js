@@ -10,63 +10,44 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-firebase.initializeApp(firebaseConfig);
+try {
+  firebase.initializeApp(firebaseConfig);
+  console.log("Firebase initialized successfully");
+} catch (error) {
+  console.error("Firebase initialization error:", error);
+}
 
-// Initialize Firebase services
-const db = firebase.firestore();
-const auth = firebase.auth();
-const storage = firebase.storage();
+// Initialize Firebase services with error handling
+let db, storage;
 
-// Enable offline persistence (optional but recommended)
-db.enablePersistence()
-  .catch((err) => {
-    if (err.code == 'failed-precondition') {
-      console.log("Persistence failed: Multiple tabs open");
-    } else if (err.code == 'unimplemented') {
-      console.log("Persistence not available");
-    }
-  });
+try {
+  db = firebase.firestore();
+  storage = firebase.storage();
+  console.log("Firebase services initialized");
+} catch (error) {
+  console.error("Firebase services initialization error:", error);
+  // Fallback to mock data for demonstration
+  db = {
+    collection: () => ({
+      add: () => Promise.reject("Firebase not configured"),
+      get: () => Promise.reject("Firebase not configured")
+    })
+  };
+  storage = {
+    ref: () => ({
+      put: () => Promise.reject("Firebase not configured")
+    })
+  };
+}
 
-  // Sign in
-auth.signInWithEmailAndPassword(email, password)
-  .then((userCredential) => {
-    const user = userCredential.user;
-  })
-  .catch((error) => {
-    console.error("Error signing in:", error);
-  });
-
-// Sign out
-auth.signOut().then(() => {
-  console.log("User signed out");
-});
-
-// Add a document
-db.collection("menu").add({
-  name: "Jollof Rice",
-  category: "main",
-  price: 1500,
-  description: "Delicious Nigerian jollof rice"
-})
-.then((docRef) => {
-  console.log("Document written with ID: ", docRef.id);
-})
-.catch((error) => {
-  console.error("Error adding document: ", error);
-});
-
-// Read documents
-db.collection("menu").get().then((querySnapshot) => {
-  querySnapshot.forEach((doc) => {
-    console.log(doc.id, " => ", doc.data());
-  });
-});
-
-// Real-time updates
-db.collection("menu").onSnapshot((querySnapshot) => {
-  const items = [];
-  querySnapshot.forEach((doc) => {
-    items.push({ id: doc.id, ...doc.data() });
-  });
-  console.log("Current menu items: ", items);
-});
+// Enable offline persistence
+if (db.enablePersistence) {
+  db.enablePersistence()
+    .catch((err) => {
+      if (err.code == 'failed-precondition') {
+        console.log("Persistence failed: Multiple tabs open");
+      } else if (err.code == 'unimplemented') {
+        console.log("Persistence not available");
+      }
+    });
+}

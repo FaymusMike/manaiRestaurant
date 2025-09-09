@@ -13,6 +13,51 @@ document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
     const requestedItem = urlParams.get('item');
     
+    // Show toast notification
+    function showToast(message, type = 'info') {
+        // Create toast container if it doesn't exist
+        let toastContainer = document.getElementById('toastContainer');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toastContainer';
+            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            document.body.appendChild(toastContainer);
+        }
+        
+        // Create toast element
+        const toastId = 'toast-' + Date.now();
+        const toast = document.createElement('div');
+        toast.id = toastId;
+        toast.className = `toast align-items-center text-white bg-${type} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
+        
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'danger' ? 'fa-exclamation-circle' : 'fa-info-circle'} me-2"></i>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+        
+        toastContainer.appendChild(toast);
+        
+        // Initialize and show toast
+        const bsToast = new bootstrap.Toast(toast, {
+            autohide: true,
+            delay: 5000
+        });
+        bsToast.show();
+        
+        // Remove toast from DOM after it's hidden
+        toast.addEventListener('hidden.bs.toast', function() {
+            toast.remove();
+        });
+    }
+    
     // Load menu items from Firebase
     function loadMenuItems() {
         const menuSelect = document.getElementById('menuSelect');
@@ -68,6 +113,8 @@ document.addEventListener('DOMContentLoaded', function() {
             errorOption.textContent = 'Failed to load menu items';
             errorOption.disabled = true;
             menuSelect.appendChild(errorOption);
+            
+            showToast('Failed to load menu. Please check your connection.', 'danger');
         });
     }
     
@@ -174,7 +221,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('quantity').addEventListener('input', calculateTotalPrice);
     
     // Handle form submission
-    document.getElementById('orderForm').addEventListener('submit', function(e) {
+    document.getElementById('orderForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         
         // Validate form
@@ -212,119 +259,173 @@ document.addEventListener('DOMContentLoaded', function() {
         submitButton.disabled = true;
         submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
         
-        // Upload payment proof to Firebase Storage
-        const storageRef = storage.ref(`payment-proofs/${Date.now()}_${paymentProof.name}`);
-        const uploadTask = storageRef.put(paymentProof);
-        
-        uploadTask.on('state_changed', 
-            (snapshot) => {
-                // Progress monitoring (optional)
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                console.log('Upload is ' + progress + '% done');
-                
-                // You could add a progress bar here if desired
-            }, 
-            (error) => {
-                // Handle unsuccessful uploads
-                console.error('Upload failed:', error);
-                showToast('Failed to upload payment proof. Please try again.', 'danger');
-                submitButton.disabled = false;
-                submitButton.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Place Order';
-            }, 
-            () => {
-                // Handle successful upload
-                uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
-                    // Create order object
-                    const order = {
-                        customerName,
-                        customerPhone,
-                        customerAddress,
-                        menuItem: selectedMenu.id,
-                        menuItemName: selectedMenu.name,
-                        size: selectedSize,
-                        quantity,
-                        unitPrice: currentPrice,
-                        totalPrice: currentPrice * quantity,
-                        paymentProofURL: downloadURL, // Store the download URL
-                        status: 'pending',
-                        orderDate: new Date(),
-                        estimatedDelivery: parseInt(selectedMenu.preparationTime) + 30, // Add delivery time
-                        completed: false,
-                        reviewProvided: false
-                    };
-                    
-                    // Save order to Firestore
-                    db.collection('orders').add(order)
-                        .then((docRef) => {
-                            // Show success message
-                            document.getElementById('orderId').textContent = docRef.id;
-                            document.getElementById('deliveryTime').textContent = order.estimatedDelivery;
-                            document.getElementById('orderConfirmation').classList.remove('d-none');
-                            
-                            // Hide form
-                            document.getElementById('orderForm').classList.add('d-none');
-                            
-                            // Reset form
-                            document.getElementById('orderForm').reset();
-                            
-                            // Show success toast
-                            showToast('Order placed successfully!', 'success');
-                        })
-                        .catch((error) => {
-                            console.error('Error saving order: ', error);
-                            showToast('Failed to place order. Please try again.', 'danger');
-                            submitButton.disabled = false;
-                            submitButton.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Place Order';
-                        });
-                });
+        try {
+            // Upload payment proof to Firebase Storage
+            const storageRef = storage.ref(`payment-proofs/${Date.now()}_${paymentProof.name}`);
+            const uploadTask = storageRef.put(paymentProof);
+            
+            // Wait for upload to complete
+            await new Promise((resolve, reject) => {
+                uploadTask.on('state_changed', 
+                    (snapshot) => {
+                        // Progress monitoring
+                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        console.log('Upload is ' + progress + '% done');
+                    }, 
+                    (error) => {
+                        // Handle unsuccessful uploads
+                        reject(error);
+                    }, 
+                    () => {
+                        // Upload completed successfully
+                        resolve();
+                    }
+                );
+            });
+            
+            // Get download URL
+            const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
+            
+            // Create order object
+            const order = {
+                customerName,
+                customerPhone,
+                customerAddress,
+                menuItem: selectedMenu.id,
+                menuItemName: selectedMenu.name,
+                size: selectedSize,
+                quantity,
+                unitPrice: currentPrice,
+                totalPrice: currentPrice * quantity,
+                paymentProofURL: downloadURL,
+                status: 'pending',
+                orderDate: new Date(),
+                estimatedDelivery: parseInt(selectedMenu.preparationTime) + 30,
+                completed: false,
+                reviewProvided: false
+            };
+            
+            // Save order to Firestore
+            const docRef = await db.collection('orders').add(order);
+            
+            // Show success message
+            document.getElementById('orderId').textContent = docRef.id;
+            document.getElementById('deliveryTime').textContent = order.estimatedDelivery;
+            document.getElementById('orderConfirmation').classList.remove('d-none');
+            
+            // Hide form
+            document.getElementById('orderForm').classList.add('d-none');
+            
+            // Show success toast
+            showToast('Order placed successfully!', 'success');
+            
+        } catch (error) {
+            console.error('Error processing order:', error);
+            
+            // Check if it's a Firebase storage error (free tier limitation)
+            if (error.code === 'storage/unauthorized') {
+                showToast('Payment proof upload failed. Please try again or contact support.', 'danger');
+            } else {
+                showToast('Failed to place order. Please try again.', 'danger');
             }
-        );
-    });
-    
-    // Show toast notification
-    function showToast(message, type = 'info') {
-        // Create toast container if it doesn't exist
-        let toastContainer = document.getElementById('toastContainer');
-        if (!toastContainer) {
-            toastContainer = document.createElement('div');
-            toastContainer.id = 'toastContainer';
-            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
-            document.body.appendChild(toastContainer);
+            
+            // Re-enable submit button
+            submitButton.disabled = false;
+            submitButton.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Place Order';
         }
+    });
+
+    // Image preview functionality
+    document.getElementById('paymentProof').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        const preview = document.getElementById('uploadPreview');
+        const previewImage = document.getElementById('previewImage');
         
-        // Create toast element
-        const toastId = 'toast-' + Date.now();
-        const toast = document.createElement('div');
-        toast.id = toastId;
-        toast.className = `toast align-items-center text-white bg-${type} border-0`;
-        toast.setAttribute('role', 'alert');
-        toast.setAttribute('aria-live', 'assertive');
-        toast.setAttribute('aria-atomic', 'true');
+        if (file) {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                previewImage.src = e.target.result;
+                preview.classList.remove('d-none');
+            }
+            
+            reader.readAsDataURL(file);
+        } else {
+            preview.classList.add('d-none');
+        }
+    });
+
+    // Remove image functionality
+    document.getElementById('removeImage').addEventListener('click', function() {
+        document.getElementById('paymentProof').value = '';
+        document.getElementById('uploadPreview').classList.add('d-none');
+    });
+
+    // Update progress steps when payment section is shown
+    const originalDisplayMenuDetails = displayMenuDetails;
+    displayMenuDetails = function(menuItem) {
+        originalDisplayMenuDetails(menuItem);
         
-        toast.innerHTML = `
-            <div class="d-flex">
-                <div class="toast-body">
-                    ${message}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-        `;
-        
-        toastContainer.appendChild(toast);
-        
-        // Initialize and show toast
-        const bsToast = new bootstrap.Toast(toast, {
-            autohide: true,
-            delay: 5000
+        // Update progress steps
+        document.querySelectorAll('.order-step').forEach((step, index) => {
+            if (index === 1) {
+                step.classList.add('step-active');
+            } else if (index < 1) {
+                step.classList.add('step-completed');
+            } else {
+                step.classList.remove('step-active', 'step-completed');
+            }
         });
-        bsToast.show();
-        
-        // Remove toast from DOM after it's hidden
-        toast.addEventListener('hidden.bs.toast', function() {
-            toast.remove();
+    };
+
+    // Update progress steps when form is submitted
+    const originalSubmitHandler = document.getElementById('orderForm').onsubmit;
+    document.getElementById('orderForm').onsubmit = function(e) {
+        // Update progress steps
+        document.querySelectorAll('.order-step').forEach((step, index) => {
+            if (index === 2) {
+                step.classList.add('step-active');
+            } else if (index < 2) {
+                step.classList.add('step-completed');
+            } else {
+                step.classList.remove('step-active', 'step-completed');
+            }
         });
-    }
+        
+        return originalSubmitHandler ? originalSubmitHandler.call(this, e) : true;
+    };
     
     // Initialize page
     loadMenuItems();
+    
+    // Add demo mode functionality for testing
+    setupDemoMode();
+    
+    // Setup demo mode for testing without Firebase
+    function setupDemoMode() {
+        const demoButton = document.createElement('button');
+        demoButton.className = 'btn btn-outline-secondary position-fixed';
+        demoButton.style.bottom = '20px';
+        demoButton.style.right = '20px';
+        demoButton.style.zIndex = '1000';
+        demoButton.innerHTML = '<i class="fas fa-magic me-1"></i> Demo Mode';
+        demoButton.addEventListener('click', activateDemoMode);
+        document.body.appendChild(demoButton);
+    }
+    
+    function activateDemoMode() {
+        // Fill form with demo data
+        document.getElementById('customerName').value = 'John Doe';
+        document.getElementById('customerPhone').value = '+2348012345678';
+        document.getElementById('customerAddress').value = '123 Main Street, Demba';
+        document.getElementById('quantity').value = '2';
+        
+        // Show success message without Firebase
+        document.getElementById('orderId').textContent = 'DEMO-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+        document.getElementById('deliveryTime').textContent = '45';
+        document.getElementById('orderConfirmation').classList.remove('d-none');
+        document.getElementById('orderForm').classList.add('d-none');
+        
+        showToast('Demo order placed successfully!', 'success');
+    }
 });
