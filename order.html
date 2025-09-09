@@ -9,6 +9,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
     <style>
+        :root {
+            --primary-color: #e65100;
+            --secondary-color: #ff9800;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+        }
+        
         .order-progress {
             display: flex;
             justify-content: space-between;
@@ -81,6 +89,55 @@
             padding-bottom: 10px;
             margin-bottom: 15px;
         }
+        .cart-item {
+            border-left: 4px solid var(--primary-color);
+            transition: all 0.3s ease;
+        }
+        .cart-item:hover {
+            background-color: #f8f9fa;
+        }
+        .cart-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: var(--danger-color);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+        }
+        .voucher-badge {
+            background: linear-gradient(45deg, #ff6b00, #ff9800);
+            color: white;
+            border-radius: 15px;
+            padding: 5px 15px;
+            font-weight: bold;
+        }
+        @media (max-width: 768px) {
+            .order-progress {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            .order-progress:before {
+                display: none;
+            }
+            .order-step {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .step-number {
+                margin: 0;
+            }
+            .cart-item {
+                flex-direction: column;
+            }
+        }
     </style>
 </head>
 <body>
@@ -106,6 +163,12 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="admin.html">Admin</a>
+                    </li>
+                    <li class="nav-item position-relative">
+                        <a class="nav-link" href="#" id="cartButton">
+                            <i class="fas fa-shopping-cart"></i>
+                            <span class="cart-badge d-none" id="cartCount">0</span>
+                        </a>
                     </li>
                 </ul>
             </div>
@@ -161,10 +224,15 @@
                                     
                                     <div class="mb-3">
                                         <label for="menuSelect" class="form-label">Select Menu Item <span class="text-danger">*</span></label>
-                                        <select class="form-select" id="menuSelect" required>
-                                            <option value="" selected disabled>Choose a menu item</option>
-                                            <!-- Menu items will be populated dynamically -->
-                                        </select>
+                                        <div class="input-group">
+                                            <select class="form-select" id="menuSelect" required>
+                                                <option value="" selected disabled>Choose a menu item</option>
+                                                <!-- Menu items will be populated dynamically -->
+                                            </select>
+                                            <button class="btn btn-primary" type="button" id="addToCartBtn">
+                                                <i class="fas fa-cart-plus"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                     
                                     <div id="menuDetails" class="mb-3 p-3 bg-light rounded d-none">
@@ -182,8 +250,19 @@
                                                 <input type="number" class="form-control" id="quantity" min="1" value="1" required>
                                             </div>
                                         </div>
-                                        <div class="mt-3">
-                                            <h5>Price: <span id="calculatedPrice" class="text-success">₦0.00</span></h5>
+                                    </div>
+                                    
+                                    <!-- Cart Items -->
+                                    <div class="mb-3" id="cartSection">
+                                        <h5 class="mb-3">Your Order Items</h5>
+                                        <div id="cartItems" class="mb-3">
+                                            <p class="text-muted text-center" id="emptyCartMessage">Your cart is empty. Add items from the menu.</p>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h5>Total: <span id="cartTotal" class="text-success">₦0.00</span></h5>
+                                            <button type="button" class="btn btn-outline-danger btn-sm" id="clearCartBtn">
+                                                <i class="fas fa-trash me-1"></i> Clear Cart
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -249,15 +328,27 @@
                             <h4 class="alert-heading">Order Placed Successfully!</h4>
                             <p>Your order ID is: <strong id="orderId" class="fs-5"></strong></p>
                             <p>Estimated delivery time: <strong id="deliveryTime" class="fs-5"></strong> minutes</p>
-                            <p>You will receive a confirmation call shortly.</p>
+                            
+                            <div class="mt-3 p-3 bg-light rounded" id="voucherSection">
+                                <h5><i class="fas fa-gift me-2 text-warning"></i> Your Gift Voucher</h5>
+                                <p>Use this code on your next order for a discount:</p>
+                                <div class="voucher-badge text-center my-2" id="voucherCode">
+                                    Loading...
+                                </div>
+                                <small class="text-muted">Voucher will be valid for 30 days</small>
+                            </div>
+                            
                             <hr>
-                            <div class="d-flex gap-2">
+                            <div class="d-flex gap-2 flex-wrap">
                                 <a href="index.html" class="btn btn-outline-success">
                                     <i class="fas fa-home me-1"></i> Back to Home
                                 </a>
                                 <a href="menu.html" class="btn btn-success">
                                     <i class="fas fa-utensils me-1"></i> Order Again
                                 </a>
+                                <button class="btn btn-outline-primary" id="copyOrderIdBtn">
+                                    <i class="fas fa-copy me-1"></i> Copy Order ID
+                                </button>
                             </div>
                         </div>
                     </div>

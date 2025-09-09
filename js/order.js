@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let selectedMenu = null;
     let selectedSize = '';
     let currentPrice = 0;
+    let cartItems = [];
     
     // Firebase references
     const db = firebase.firestore();
@@ -11,6 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check if a specific menu item was requested via URL parameter
     const urlParams = new URLSearchParams(window.location.search);
     const requestedItem = urlParams.get('item');
+    const requestedItemSize = urlParams.get('size');
     
     // Show toast notification
     function showToast(message, type = 'info') {
@@ -97,10 +99,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 option.dataset.preparationTime = menuItem.preparationTime;
                 menuSelect.appendChild(option);
                 
-                // If this is the requested item, select it
+                // If this is the requested item, select it and auto-add to cart
                 if (requestedItem && doc.id === requestedItem) {
                     menuSelect.value = doc.id;
                     triggerEvent(menuSelect, 'change');
+                    
+                    // Auto-select size if provided
+                    if (requestedItemSize) {
+                        setTimeout(() => {
+                            const sizeBtn = document.querySelector(`[data-size="${requestedItemSize}"]`);
+                            if (sizeBtn) sizeBtn.click();
+                            
+                            // Auto-add to cart after a delay
+                            setTimeout(() => {
+                                addToCart();
+                                showToast('Item added to cart from your previous selection', 'success');
+                            }, 500);
+                        }, 300);
+                    }
                 }
             });
         }).catch((error) => {
@@ -144,7 +160,6 @@ document.addEventListener('DOMContentLoaded', function() {
             displayMenuDetails(selectedMenu);
         } else {
             document.getElementById('menuDetails').classList.add('d-none');
-            document.getElementById('paymentInfo').classList.add('d-none');
         }
     });
     
@@ -183,15 +198,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Set selected size and price
                 selectedSize = this.dataset.size;
                 currentPrice = parseFloat(this.dataset.price);
-                
-                // Calculate and update price
-                calculateTotalPrice();
-                
-                // Show payment info
-                document.getElementById('paymentInfo').classList.remove('d-none');
-                
-                // Update progress steps
-                updateProgressSteps(1);
             });
             
             sizeOptions.appendChild(button);
@@ -210,26 +216,147 @@ document.addEventListener('DOMContentLoaded', function() {
         menuDetails.classList.remove('d-none');
     }
     
-    // Calculate total price based on quantity
-    function calculateTotalPrice() {
-        const quantity = parseInt(document.getElementById('quantity').value) || 1;
-        const totalPrice = currentPrice * quantity;
+    // Add to cart functionality
+    function addToCart() {
+        if (!selectedMenu || !selectedSize) {
+            showToast('Please select a menu item and size', 'warning');
+            return;
+        }
         
-        document.getElementById('calculatedPrice').textContent = `₦${totalPrice.toFixed(2)}`;
-        document.getElementById('finalAmount').textContent = `₦${totalPrice.toFixed(2)}`;
+        const quantity = parseInt(document.getElementById('quantity').value) || 1;
+        const itemTotal = currentPrice * quantity;
+        
+        // Create cart item
+        const cartItem = {
+            id: Date.now(), // Unique ID for cart item
+            menuId: selectedMenu.id,
+            name: selectedMenu.name,
+            size: selectedSize,
+            price: currentPrice,
+            quantity: quantity,
+            total: itemTotal
+        };
+        
+        // Add to cart array
+        cartItems.push(cartItem);
+        
+        // Update cart UI
+        updateCartUI();
+        
+        // Show success message
+        showToast(`${quantity} x ${selectedMenu.name} (${selectedSize}) added to cart`, 'success');
+        
+        // Reset quantity
+        document.getElementById('quantity').value = 1;
     }
     
-    // Handle quantity change
-    document.getElementById('quantity').addEventListener('input', calculateTotalPrice);
-    
-    // Convert image to Base64
-    function convertImageToBase64(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = error => reject(error);
+    // Update cart UI
+    function updateCartUI() {
+        const cartItemsContainer = document.getElementById('cartItems');
+        const emptyCartMessage = document.getElementById('emptyCartMessage');
+        const cartTotalElement = document.getElementById('cartTotal');
+        const cartCountElement = document.getElementById('cartCount');
+        const paymentInfoSection = document.getElementById('paymentInfo');
+        const finalAmountElement = document.getElementById('finalAmount');
+        
+        // Clear cart items
+        cartItemsContainer.innerHTML = '';
+        
+        if (cartItems.length === 0) {
+            emptyCartMessage.classList.remove('d-none');
+            cartTotalElement.textContent = '₦0.00';
+            cartCountElement.classList.add('d-none');
+            paymentInfoSection.classList.add('d-none');
+            return;
+        }
+        
+        emptyCartMessage.classList.add('d-none');
+        
+        // Calculate total
+        let cartTotal = 0;
+        
+        // Add each item to cart UI
+        cartItems.forEach(item => {
+            cartTotal += item.total;
+            
+            const cartItemElement = document.createElement('div');
+            cartItemElement.className = 'card mb-2 cart-item';
+            cartItemElement.innerHTML = `
+                <div class="card-body py-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">${item.name} (${item.size})</h6>
+                            <small class="text-muted">₦${item.price.toFixed(2)} x ${item.quantity}</small>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <span class="me-2 fw-bold">₦${item.total.toFixed(2)}</span>
+                            <button type="button" class="btn btn-sm btn-outline-danger remove-from-cart" data-id="${item.id}">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            cartItemsContainer.appendChild(cartItemElement);
         });
+        
+        // Update total
+        cartTotalElement.textContent = `₦${cartTotal.toFixed(2)}`;
+        finalAmountElement.textContent = `₦${cartTotal.toFixed(2)}`;
+        
+        // Update cart count
+        cartCountElement.textContent = cartItems.length;
+        cartCountElement.classList.remove('d-none');
+        
+        // Show payment section
+        paymentInfoSection.classList.remove('d-none');
+        
+        // Add event listeners to remove buttons
+        document.querySelectorAll('.remove-from-cart').forEach(button => {
+            button.addEventListener('click', function() {
+                const itemId = parseInt(this.getAttribute('data-id'));
+                removeFromCart(itemId);
+            });
+        });
+    }
+    
+    // Remove item from cart
+    function removeFromCart(itemId) {
+        cartItems = cartItems.filter(item => item.id !== itemId);
+        updateCartUI();
+        showToast('Item removed from cart', 'info');
+    }
+    
+    // Clear cart
+    function clearCart() {
+        if (cartItems.length === 0) return;
+        
+        if (confirm('Are you sure you want to clear your cart?')) {
+            cartItems = [];
+            updateCartUI();
+            showToast('Cart cleared', 'info');
+        }
+    }
+    
+    // Generate random voucher
+    function generateVoucher(orderTotal) {
+        const voucherAmounts = [500, 200, 100, 50];
+        const randomAmount = voucherAmounts[Math.floor(Math.random() * voucherAmounts.length)];
+        
+        // Create voucher code
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let voucherCode = 'MANAI-';
+        
+        for (let i = 0; i < 6; i++) {
+            voucherCode += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        
+        return {
+            code: voucherCode,
+            amount: randomAmount,
+            expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
+        };
     }
     
     // Handle form submission
@@ -237,15 +364,14 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         
         // Validate form
-        if (!selectedMenu || !selectedSize) {
-            showToast('Please select a menu item and size', 'danger');
+        if (cartItems.length === 0) {
+            showToast('Please add items to your cart first', 'warning');
             return;
         }
         
         const customerName = document.getElementById('customerName').value;
         const customerPhone = document.getElementById('customerPhone').value;
         const customerAddress = document.getElementById('customerAddress').value;
-        const quantity = parseInt(document.getElementById('quantity').value);
         const paymentProof = document.getElementById('paymentProof').files[0];
         
         if (!paymentProof) {
@@ -275,24 +401,27 @@ document.addEventListener('DOMContentLoaded', function() {
             // Convert image to Base64
             const base64Image = await convertImageToBase64(paymentProof);
             
+            // Calculate order total
+            const orderTotal = cartItems.reduce((total, item) => total + item.total, 0);
+            
+            // Generate voucher
+            const voucher = generateVoucher(orderTotal);
+            
             // Create order object with Base64 image
             const order = {
                 customerName,
                 customerPhone,
                 customerAddress,
-                menuItem: selectedMenu.id,
-                menuItemName: selectedMenu.name,
-                size: selectedSize,
-                quantity,
-                unitPrice: currentPrice,
-                totalPrice: currentPrice * quantity,
-                paymentProofBase64: base64Image, // Store as Base64
+                items: cartItems,
+                total: orderTotal,
+                paymentProofBase64: base64Image,
                 paymentProofFilename: paymentProof.name,
                 status: 'pending',
                 orderDate: new Date(),
-                estimatedDelivery: parseInt(selectedMenu.preparationTime) + 30,
+                estimatedDelivery: 45, // Default delivery time
                 completed: false,
-                reviewProvided: false
+                reviewProvided: false,
+                voucher: voucher
             };
             
             // Save order to Firestore
@@ -301,6 +430,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Show success message
             document.getElementById('orderId').textContent = docRef.id;
             document.getElementById('deliveryTime').textContent = order.estimatedDelivery;
+            document.getElementById('voucherCode').textContent = `${voucher.code} - ₦${voucher.amount} OFF`;
             document.getElementById('orderConfirmation').classList.remove('d-none');
             
             // Hide form
@@ -329,6 +459,16 @@ document.addEventListener('DOMContentLoaded', function() {
             submitButton.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Place Order';
         }
     });
+    
+    // Convert image to Base64
+    function convertImageToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+    }
     
     // Update progress steps
     function updateProgressSteps(activeStep) {
@@ -369,44 +509,20 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('uploadPreview').classList.add('d-none');
     });
     
+    // Copy Order ID functionality
+    document.getElementById('copyOrderIdBtn').addEventListener('click', function() {
+        const orderId = document.getElementById('orderId').textContent;
+        navigator.clipboard.writeText(orderId).then(() => {
+            showToast('Order ID copied to clipboard', 'success');
+        });
+    });
+    
+    // Event listeners
+    document.getElementById('addToCartBtn').addEventListener('click', addToCart);
+    document.getElementById('clearCartBtn').addEventListener('click', clearCart);
+    
     // Initialize page
     loadMenuItems();
     updateProgressSteps(0);
-    
-    // Setup demo mode for testing
-    setupDemoMode();
-    
-    // Setup demo mode for testing without Firebase
-    function setupDemoMode() {
-        // Check if we're in a development environment
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            const demoButton = document.createElement('button');
-            demoButton.className = 'btn btn-outline-secondary position-fixed';
-            demoButton.style.bottom = '20px';
-            demoButton.style.right = '20px';
-            demoButton.style.zIndex = '1000';
-            demoButton.innerHTML = '<i class="fas fa-magic me-1"></i> Demo Mode';
-            demoButton.addEventListener('click', activateDemoMode);
-            document.body.appendChild(demoButton);
-        }
-    }
-    
-    function activateDemoMode() {
-        // Fill form with demo data
-        document.getElementById('customerName').value = 'John Doe';
-        document.getElementById('customerPhone').value = '+2348012345678';
-        document.getElementById('customerAddress').value = '123 Main Street, Demba';
-        document.getElementById('quantity').value = '2';
-        
-        // Show success message without Firebase
-        document.getElementById('orderId').textContent = 'DEMO-' + Math.random().toString(36).substr(2, 9).toUpperCase();
-        document.getElementById('deliveryTime').textContent = '45';
-        document.getElementById('orderConfirmation').classList.remove('d-none');
-        document.getElementById('orderForm').classList.add('d-none');
-        
-        // Update progress steps
-        updateProgressSteps(2);
-        
-        showToast('Demo order placed successfully!', 'success');
-    }
+    updateCartUI();
 });

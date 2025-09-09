@@ -188,3 +188,73 @@ body {
         font-size: 2.5rem;
     }
 }
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .container {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+    
+    .navbar-brand {
+        font-size: 1.1rem;
+    }
+    
+    .hero-section h1 {
+        font-size: 2rem;
+    }
+    
+    .hero-section p.lead {
+        font-size: 1rem;
+    }
+    
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .table-responsive {
+        font-size: 0.9rem;
+    }
+    
+    .btn-group .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8rem;
+    }
+}
+
+/* Fix for overlapping elements */
+@media (max-width: 576px) {
+    .navbar-nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    
+    .navbar-nav .nav-item {
+        margin: 0.2rem;
+    }
+    
+    .d-flex.gap-2 {
+        flex-direction: column;
+    }
+    
+    .d-flex.gap-2 .btn {
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* Ensure images don't overflow */
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Improve form elements on mobile */
+@media (max-width: 768px) {
+    .form-control, .form-select {
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+    
+    .btn {
+        padding: 0.75rem 1rem;
+    }
+}

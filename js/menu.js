@@ -89,24 +89,24 @@ document.addEventListener('DOMContentLoaded', function() {
         setupFiltering();
     }
     
-    // Show item details in modal
+    // Show item details in modal    
+    // In the showItemDetails function, update the order button
     function showItemDetails(itemId) {
-        const modalElement = document.getElementById('menuItemModal');
-        const modal = new bootstrap.Modal(modalElement);
-        
-        // Show loading state in modal
-        document.getElementById('modalItemName').textContent = 'Loading...';
-        document.getElementById('modalItemImage').src = '';
-        document.getElementById('modalItemDescription').textContent = 'Please wait while we load the item details.';
-        document.getElementById('modalItemTime').textContent = '';
-        document.getElementById('modalItemPrices').innerHTML = '<li class="text-muted">Loading prices...</li>';
-        
-        modal.show();
-        
         db.collection('menu').doc(itemId).get().then((doc) => {
             if (doc.exists) {
                 const item = doc.data();
+                const modal = new bootstrap.Modal(document.getElementById('menuItemModal'));
                 
+            // Show loading state in modal
+            document.getElementById('modalItemName').textContent = 'Loading...';
+            document.getElementById('modalItemImage').src = '';
+            document.getElementById('modalItemDescription').textContent = 'Please wait while we load the item details.';
+            document.getElementById('modalItemTime').textContent = '';
+            document.getElementById('modalItemPrices').innerHTML = '<li class="text-muted">Loading prices...</li>';
+            
+            modal.show();
+
+
                 document.getElementById('modalItemName').textContent = item.name;
                 document.getElementById('modalItemImage').src = item.image;
                 document.getElementById('modalItemDescription').textContent = item.description;
@@ -122,11 +122,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     pricesList.appendChild(li);
                 }
                 
-                // Update order button to include item ID
+                // Update order button to include item ID and default size
                 const orderButton = modalElement.querySelector('.order-now-btn');
                 if (orderButton) {
-                    orderButton.href = `order.html?item=${itemId}`;
+                    orderButton.href = `order.html?item=${itemId}&size=medium`;
+                    orderButton.innerHTML = '<i class="fas fa-shopping-cart me-1"></i> Add to Order';
                 }
+                
+                modal.show();
             }
         }).catch((error) => {
             console.error("Error getting menu item: ", error);
