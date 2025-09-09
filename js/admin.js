@@ -600,13 +600,13 @@ document.addEventListener('DOMContentLoaded', function() {
     function showOrderDetails(orderId) {
         const order = currentOrders.find(o => o.id === orderId);
         if (!order) return;
-        
+
         const modalElement = document.getElementById('orderDetailsModal');
         if (!modalElement) return;
-        
+
         const modal = new bootstrap.Modal(modalElement);
         const orderDate = order.orderDate;
-        
+
         // Populate order details
         document.getElementById('orderDetailId').textContent = orderId.substring(0, 8) + '...';
         document.getElementById('orderCustomerName').textContent = order.customerName;
@@ -616,7 +616,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('orderStatus').textContent = order.status;
         document.getElementById('orderStatus').className = `badge bg-${getStatusColor(order.status)}`;
         document.getElementById('orderTotalAmount').textContent = `₦${order.totalPrice.toFixed(2)}`;
-        
+
         // Populate order items
         const orderItemsList = document.getElementById('orderItemsList');
         orderItemsList.innerHTML = `
@@ -629,36 +629,73 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
         `;
-        
+
         // Populate payment proof
         const paymentProofContainer = document.getElementById('paymentProofContainer');
         if (order.paymentProofURL) {
-            if (order.paymentProofURL.toLowerCase().endsWith('.pdf')) {
+            // Check if it's an image (common image extensions)
+            const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+            const isImage = imageExtensions.some(ext => order.paymentProofURL.toLowerCase().includes(ext));
+            
+            if (isImage) {
+                // Display image with preview
                 paymentProofContainer.innerHTML = `
-                    <a href="${order.paymentProofURL}" target="_blank" class="btn btn-outline-primary">
-                        <i class="fas fa-file-pdf me-1"></i> View Payment Proof (PDF)
-                    </a>
+                    <div class="mb-3">
+                        <img src="${order.paymentProofURL}" alt="Payment Proof" 
+                            class="img-fluid rounded shadow-sm" style="max-height: 300px;">
+                    </div>
+                    <div>
+                        <a href="${order.paymentProofURL}" target="_blank" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-external-link-alt me-1"></i> Open in New Tab
+                        </a>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard('${order.paymentProofURL}')">
+                            <i class="fas fa-copy me-1"></i> Copy Link
+                        </button>
+                    </div>
                 `;
             } else {
+                // Display download link for non-image files
                 paymentProofContainer.innerHTML = `
-                    <a href="${order.paymentProofURL}" target="_blank">
-                        <img src="${order.paymentProofURL}" alt="Payment Proof" style="max-width: 100%; max-height: 300px;">
-                    </a>
+                    <div class="alert alert-info">
+                        <i class="fas fa-file me-2"></i>
+                        Payment proof document
+                    </div>
+                    <div>
+                        <a href="${order.paymentProofURL}" target="_blank" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-download me-1"></i> Download Proof
+                        </a>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard('${order.paymentProofURL}')">
+                            <i class="fas fa-copy me-1"></i> Copy Link
+                        </button>
+                    </div>
                 `;
             }
         } else {
             paymentProofContainer.innerHTML = '<p class="text-muted">No payment proof available</p>';
         }
-        
+
         // Set current order ID for status update
         document.getElementById('statusUpdateSelect').value = order.status;
         document.getElementById('updateStatusBtn').setAttribute('data-id', orderId);
-        
+
         // Set current order ID for invoice generation
         document.getElementById('generateInvoiceBtn').setAttribute('data-id', orderId);
-        
+
         modal.show();
     }
+
+    // Helper function to copy text to clipboard
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            showToast('Link copied to clipboard', 'success');
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            showToast('Failed to copy link', 'danger');
+        });
+    }
+
+    // Make it available globally
+    window.copyToClipboard = copyToClipboard;
     
     // Update order status
     function updateOrderStatus() {

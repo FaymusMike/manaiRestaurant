@@ -200,6 +200,13 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        // Validate file type (images only)
+        const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        if (!validImageTypes.includes(paymentProof.type)) {
+            showToast('Please upload a valid image file (JPEG, PNG, GIF, WebP)', 'danger');
+            return;
+        }
+        
         // Disable submit button to prevent multiple submissions
         const submitButton = document.getElementById('submitOrder');
         submitButton.disabled = true;
@@ -214,6 +221,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Progress monitoring (optional)
                 const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
                 console.log('Upload is ' + progress + '% done');
+                
+                // You could add a progress bar here if desired
             }, 
             (error) => {
                 // Handle unsuccessful uploads
@@ -236,7 +245,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         quantity,
                         unitPrice: currentPrice,
                         totalPrice: currentPrice * quantity,
-                        paymentProofURL: downloadURL,
+                        paymentProofURL: downloadURL, // Store the download URL
                         status: 'pending',
                         orderDate: new Date(),
                         estimatedDelivery: parseInt(selectedMenu.preparationTime) + 30, // Add delivery time
