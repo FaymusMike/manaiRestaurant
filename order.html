@@ -15,6 +15,7 @@
             --success-color: #28a745;
             --warning-color: #ffc107;
             --danger-color: #dc3545;
+            --sidebar-width: 320px;
         }
         
         .order-progress {
@@ -117,6 +118,89 @@
             padding: 5px 15px;
             font-weight: bold;
         }
+        
+        /* Cart Sidebar Styles */
+        .cart-sidebar {
+            position: fixed;
+            top: 76px;
+            right: 0;
+            width: var(--sidebar-width);
+            height: calc(100vh - 76px);
+            background: white;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .cart-sidebar.open {
+            transform: translateX(0);
+        }
+        .cart-overlay {
+            position: fixed;
+            top: 76px;
+            left: 0;
+            width: 100%;
+            height: calc(100vh - 76px);
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            display: none;
+        }
+        .cart-overlay.open {
+            display: block;
+        }
+        .cart-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #eee;
+        }
+        .cart-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin: 0;
+        }
+        .close-cart {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        .cart-footer {
+            position: sticky;
+            bottom: 0;
+            background: white;
+            padding: 15px 0;
+            border-top: 2px solid #eee;
+        }
+        .quantity-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .quantity-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #ddd;
+            background: white;
+            cursor: pointer;
+        }
+        .quantity-input {
+            width: 40px;
+            text-align: center;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 5px;
+        }
+        
         @media (max-width: 768px) {
             .order-progress {
                 flex-direction: column;
@@ -134,8 +218,8 @@
             .step-number {
                 margin: 0;
             }
-            .cart-item {
-                flex-direction: column;
+            .cart-sidebar {
+                width: 100%;
             }
         }
     </style>
@@ -178,6 +262,41 @@
         </div>
     </nav>
 
+    <!-- Cart Overlay -->
+    <div class="cart-overlay" id="cartOverlay"></div>
+
+    <!-- Cart Sidebar -->
+    <div class="cart-sidebar" id="cartSidebar">
+        <div class="cart-header">
+            <h3 class="cart-title">Your Order Cart</h3>
+            <button class="close-cart" id="closeCart">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div id="cartItemsContainer">
+            <p class="text-muted text-center" id="emptyCartMessage">Your cart is empty. Add items from the menu.</p>
+        </div>
+        
+        <div class="cart-footer">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5>Subtotal:</h5>
+                <h5 id="cartSubtotal">₦0.00</h5>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span>Delivery Fee:</span>
+                <span id="deliveryFee">₦0.00</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4>Total:</h4>
+                <h4 id="cartTotal" class="text-success">₦0.00</h4>
+            </div>
+            <button class="btn btn-primary w-100 py-2" id="checkoutBtn" disabled>
+                <i class="fas fa-check-circle me-2"></i> Proceed to Checkout
+            </button>
+        </div>
+    </div>
+
     <div class="container mt-5 pt-5">
         <h1 class="text-center mb-4">Place Your Order</h1>
         
@@ -185,7 +304,7 @@
         <div class="order-progress">
             <div class="order-step step-active">
                 <div class="step-number">1</div>
-                <div class="step-text">Order Details</div>
+                <div class="step-text">Select Items</div>
             </div>
             <div class="order-step">
                 <div class="step-number">2</div>
@@ -198,7 +317,7 @@
         </div>
         
         <div class="row">
-            <div class="col-lg-10 mx-auto">
+            <div class="col-lg-12">
                 <div class="card shadow">
                     <div class="card-body p-4">
                         <form id="orderForm">
@@ -226,14 +345,14 @@
                                     <h4 class="mb-4"><i class="fas fa-utensils me-2"></i>Order Details</h4>
                                     
                                     <div class="mb-3">
-                                        <label for="menuSelect" class="form-label">Select Menu Item <span class="text-danger">*</span></label>
+                                        <label for="menuSelect" class="form-label">Select Menu Item</label>
                                         <div class="input-group">
-                                            <select class="form-select" id="menuSelect" required>
+                                            <select class="form-select" id="menuSelect">
                                                 <option value="" selected disabled>Choose a menu item</option>
                                                 <!-- Menu items will be populated dynamically -->
                                             </select>
                                             <button class="btn btn-primary" type="button" id="addToCartBtn">
-                                                <i class="fas fa-cart-plus"></i>
+                                                <i class="fas fa-cart-plus"></i> Add to Cart
                                             </button>
                                         </div>
                                     </div>
@@ -250,23 +369,16 @@
                                             </div>
                                             <div class="col-md-6">
                                                 <label for="quantity" class="form-label">Quantity <span class="text-danger">*</span></label>
-                                                <input type="number" class="form-control" id="quantity" min="1" value="1" required>
+                                                <input type="number" class="form-control" id="quantity" min="1" value="1">
                                             </div>
                                         </div>
                                     </div>
                                     
-                                    <!-- Cart Items -->
-                                    <div class="mb-3" id="cartSection">
-                                        <h5 class="mb-3">Your Order Items</h5>
-                                        <div id="cartItems" class="mb-3">
-                                            <p class="text-muted text-center" id="emptyCartMessage">Your cart is empty. Add items from the menu.</p>
-                                        </div>
-                                        <div class="d-flex justify-content-between align-items-center mb-3">
-                                            <h5>Total: <span id="cartTotal" class="text-success">₦0.00</span></h5>
-                                            <button type="button" class="btn btn-outline-danger btn-sm" id="clearCartBtn">
-                                                <i class="fas fa-trash me-1"></i> Clear Cart
-                                            </button>
-                                        </div>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5>Cart Total: <span id="mainCartTotal" class="text-success">₦0.00</span></h5>
+                                        <button type="button" class="btn btn-outline-primary" id="viewCartBtn">
+                                            <i class="fas fa-shopping-cart me-1"></i> View Cart
+                                        </button>
                                     </div>
                                 </div>
                             </div>

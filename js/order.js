@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let selectedSize = '';
     let currentPrice = 0;
     let cartItems = [];
+    const DELIVERY_FEE = 300; // ₦300 delivery fee
     
     // Firebase references
     const db = firebase.firestore();
@@ -13,6 +14,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
     const requestedItem = urlParams.get('item');
     const requestedItemSize = urlParams.get('size');
+    
+    // DOM Elements
+    const cartSidebar = document.getElementById('cartSidebar');
+    const cartOverlay = document.getElementById('cartOverlay');
+    const closeCartBtn = document.getElementById('closeCart');
+    const viewCartBtn = document.getElementById('viewCartBtn');
+    const cartButton = document.getElementById('cartButton');
+    const checkoutBtn = document.getElementById('checkoutBtn');
     
     // Show toast notification
     function showToast(message, type = 'info') {
@@ -58,6 +67,29 @@ document.addEventListener('DOMContentLoaded', function() {
             toast.remove();
         });
     }
+    
+    // Cart sidebar functionality
+    function openCart() {
+        cartSidebar.classList.add('open');
+        cartOverlay.classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+    
+    function closeCart() {
+        cartSidebar.classList.remove('open');
+        cartOverlay.classList.remove('open');
+        document.body.style.overflow = 'auto';
+    }
+    
+    // Event listeners for cart
+    cartButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        openCart();
+    });
+    
+    viewCartBtn.addEventListener('click', openCart);
+    closeCartBtn.addEventListener('click', closeCart);
+    cartOverlay.addEventListener('click', closeCart);
     
     // Load menu items from Firebase
     function loadMenuItems() {
@@ -258,51 +290,71 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Reset quantity
         document.getElementById('quantity').value = 1;
+        
+        // Open cart sidebar
+        openCart();
     }
     
-    // Update cart UI
+    // Update cart UI - FIXED VERSION
     function updateCartUI() {
-        const cartItemsContainer = document.getElementById('cartItems');
+        const cartItemsContainer = document.getElementById('cartItemsContainer');
         const emptyCartMessage = document.getElementById('emptyCartMessage');
+        const cartSubtotalElement = document.getElementById('cartSubtotal');
+        const deliveryFeeElement = document.getElementById('deliveryFee');
         const cartTotalElement = document.getElementById('cartTotal');
+        const mainCartTotalElement = document.getElementById('mainCartTotal');
         const cartCountElement = document.getElementById('cartCount');
         const paymentInfoSection = document.getElementById('paymentInfo');
         const finalAmountElement = document.getElementById('finalAmount');
+        const checkoutBtn = document.getElementById('checkoutBtn');
         
         // Clear cart items
         cartItemsContainer.innerHTML = '';
         
         if (cartItems.length === 0) {
             emptyCartMessage.classList.remove('d-none');
+            cartSubtotalElement.textContent = '₦0.00';
+            deliveryFeeElement.textContent = '₦0.00';
             cartTotalElement.textContent = '₦0.00';
+            mainCartTotalElement.textContent = '₦0.00';
             cartCountElement.classList.add('d-none');
             paymentInfoSection.classList.add('d-none');
+            checkoutBtn.disabled = true;
             return;
         }
         
         emptyCartMessage.classList.add('d-none');
         
-        // Calculate total
-        let cartTotal = 0;
+        // Calculate subtotal
+        let cartSubtotal = 0;
         
         // Add each item to cart UI
         cartItems.forEach(item => {
-            cartTotal += item.total;
+            cartSubtotal += item.total;
             
             const cartItemElement = document.createElement('div');
-            cartItemElement.className = 'card mb-2 cart-item';
+            cartItemElement.className = 'card mb-3 cart-item';
             cartItemElement.innerHTML = `
-                <div class="card-body py-2">
-                    <div class="d-flex justify-content-between align-items-center">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
                         <div>
-                            <h6 class="mb-0">${item.name} (${item.size})</h6>
-                            <small class="text-muted">₦${item.price.toFixed(2)} x ${item.quantity}</small>
+                            <h6 class="mb-0">${item.name}</h6>
+                            <small class="text-muted">Size: ${item.size}</small>
                         </div>
-                        <div class="d-flex align-items-center">
-                            <span class="me-2 fw-bold">₦${item.total.toFixed(2)}</span>
-                            <button type="button" class="btn btn-sm btn-outline-danger remove-from-cart" data-id="${item.id}">
-                                <i class="fas fa-times"></i>
-                            </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-from-cart" data-id="${item.id}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="quantity-controls">
+                            <button class="quantity-btn decrease-quantity" data-id="${item.id}">-</button>
+                            <input type="number" class="quantity-input" value="${item.quantity}" min="1" data-id="${item.id}">
+                            <button class="quantity-btn increase-quantity" data-id="${item.id}">+</button>
+                        </div>
+                        <div class="text-end">
+                            <div class="fw-bold">₦${item.total.toFixed(2)}</div>
+                            <small class="text-muted">₦${item.price.toFixed(2)} each</small>
                         </div>
                     </div>
                 </div>
@@ -311,22 +363,64 @@ document.addEventListener('DOMContentLoaded', function() {
             cartItemsContainer.appendChild(cartItemElement);
         });
         
-        // Update total
+        // Calculate delivery fee (free for orders over ₦5000)
+        const deliveryFee = cartSubtotal > 5000 ? 0 : DELIVERY_FEE;
+        const cartTotal = cartSubtotal + deliveryFee;
+        
+        // Update totals
+        cartSubtotalElement.textContent = `₦${cartSubtotal.toFixed(2)}`;
+        deliveryFeeElement.textContent = `₦${deliveryFee.toFixed(2)}`;
         cartTotalElement.textContent = `₦${cartTotal.toFixed(2)}`;
+        mainCartTotalElement.textContent = `₦${cartTotal.toFixed(2)}`;
         finalAmountElement.textContent = `₦${cartTotal.toFixed(2)}`;
         
         // Update cart count
-        cartCountElement.textContent = cartItems.length;
+        const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+        cartCountElement.textContent = totalItems;
         cartCountElement.classList.remove('d-none');
         
-        // Show payment section
+        // Show payment section if we have items
         paymentInfoSection.classList.remove('d-none');
         
-        // Add event listeners to remove buttons
+        // Enable checkout button
+        checkoutBtn.disabled = false;
+        
+        // Add event listeners to cart items
+        addCartItemEventListeners();
+    }
+    
+    // Add event listeners to cart items
+    function addCartItemEventListeners() {
+        // Remove item buttons
         document.querySelectorAll('.remove-from-cart').forEach(button => {
             button.addEventListener('click', function() {
                 const itemId = parseInt(this.getAttribute('data-id'));
                 removeFromCart(itemId);
+            });
+        });
+        
+        // Decrease quantity buttons
+        document.querySelectorAll('.decrease-quantity').forEach(button => {
+            button.addEventListener('click', function() {
+                const itemId = parseInt(this.getAttribute('data-id'));
+                updateItemQuantity(itemId, -1);
+            });
+        });
+        
+        // Increase quantity buttons
+        document.querySelectorAll('.increase-quantity').forEach(button => {
+            button.addEventListener('click', function() {
+                const itemId = parseInt(this.getAttribute('data-id'));
+                updateItemQuantity(itemId, 1);
+            });
+        });
+        
+        // Quantity input changes
+        document.querySelectorAll('.quantity-input').forEach(input => {
+            input.addEventListener('change', function() {
+                const itemId = parseInt(this.getAttribute('data-id'));
+                const newQuantity = parseInt(this.value) || 1;
+                setItemQuantity(itemId, newQuantity);
             });
         });
     }
@@ -336,6 +430,38 @@ document.addEventListener('DOMContentLoaded', function() {
         cartItems = cartItems.filter(item => item.id !== itemId);
         updateCartUI();
         showToast('Item removed from cart', 'info');
+    }
+    
+    // Update item quantity
+    function updateItemQuantity(itemId, change) {
+        const itemIndex = cartItems.findIndex(item => item.id === itemId);
+        if (itemIndex !== -1) {
+            cartItems[itemIndex].quantity += change;
+            
+            // Ensure quantity is at least 1
+            if (cartItems[itemIndex].quantity < 1) {
+                cartItems[itemIndex].quantity = 1;
+            }
+            
+            // Update total
+            cartItems[itemIndex].total = cartItems[itemIndex].price * cartItems[itemIndex].quantity;
+            
+            updateCartUI();
+        }
+    }
+    
+    // Set specific item quantity
+    function setItemQuantity(itemId, quantity) {
+        const itemIndex = cartItems.findIndex(item => item.id === itemId);
+        if (itemIndex !== -1) {
+            // Ensure quantity is at least 1
+            cartItems[itemIndex].quantity = Math.max(1, quantity);
+            
+            // Update total
+            cartItems[itemIndex].total = cartItems[itemIndex].price * cartItems[itemIndex].quantity;
+            
+            updateCartUI();
+        }
     }
     
     // Clear cart
@@ -405,14 +531,16 @@ document.addEventListener('DOMContentLoaded', function() {
         // Disable submit button to prevent multiple submissions
         const submitButton = document.getElementById('submitOrder');
         submitButton.disabled = true;
-        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+        submitButton.innerHTML = '<div class="loading-spinner"></div> Processing...';
         
         try {
             // Convert image to Base64
             const base64Image = await convertImageToBase64(paymentProof);
             
             // Calculate order total
-            const orderTotal = cartItems.reduce((total, item) => total + item.total, 0);
+            const orderSubtotal = cartItems.reduce((total, item) => total + item.total, 0);
+            const deliveryFee = orderSubtotal > 5000 ? 0 : DELIVERY_FEE;
+            const orderTotal = orderSubtotal + deliveryFee;
             
             // Generate voucher
             const voucher = generateVoucher(orderTotal);
@@ -423,6 +551,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 customerPhone,
                 customerAddress,
                 items: cartItems,
+                subtotal: orderSubtotal,
+                deliveryFee: deliveryFee,
                 total: orderTotal,
                 paymentProofBase64: base64Image,
                 paymentProofFilename: paymentProof.name,
@@ -527,9 +657,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
+    // Checkout button functionality
+    checkoutBtn.addEventListener('click', function() {
+        closeCart();
+        document.getElementById('paymentInfo').scrollIntoView({ behavior: 'smooth' });
+    });
+    
     // Event listeners
     document.getElementById('addToCartBtn').addEventListener('click', addToCart);
-    document.getElementById('clearCartBtn').addEventListener('click', clearCart);
     
     // Initialize page
     loadMenuItems();
