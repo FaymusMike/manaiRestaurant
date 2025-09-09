@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Firebase references
     const db = firebase.firestore();
-    const storage = firebase.storage();
     
     // Check if a specific menu item was requested via URL parameter
     const urlParams = new URLSearchParams(window.location.search);
@@ -190,6 +189,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Show payment info
                 document.getElementById('paymentInfo').classList.remove('d-none');
+                
+                // Update progress steps
+                updateProgressSteps(1);
             });
             
             sizeOptions.appendChild(button);
@@ -220,6 +222,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle quantity change
     document.getElementById('quantity').addEventListener('input', calculateTotalPrice);
     
+    // Convert image to Base64
+    function convertImageToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+    }
+    
     // Handle form submission
     document.getElementById('orderForm').addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -241,9 +253,9 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Validate file size (max 5MB)
-        if (paymentProof.size > 5 * 1024 * 1024) {
-            showToast('Please upload a file smaller than 5MB', 'danger');
+        // Validate file size (max 2MB to avoid Firestore document size limits)
+        if (paymentProof.size > 2 * 1024 * 1024) {
+            showToast('Please upload a file smaller than 2MB', 'danger');
             return;
         }
         
@@ -260,33 +272,10 @@ document.addEventListener('DOMContentLoaded', function() {
         submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
         
         try {
-            // Upload payment proof to Firebase Storage
-            const storageRef = storage.ref(`payment-proofs/${Date.now()}_${paymentProof.name}`);
-            const uploadTask = storageRef.put(paymentProof);
+            // Convert image to Base64
+            const base64Image = await convertImageToBase64(paymentProof);
             
-            // Wait for upload to complete
-            await new Promise((resolve, reject) => {
-                uploadTask.on('state_changed', 
-                    (snapshot) => {
-                        // Progress monitoring
-                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                        console.log('Upload is ' + progress + '% done');
-                    }, 
-                    (error) => {
-                        // Handle unsuccessful uploads
-                        reject(error);
-                    }, 
-                    () => {
-                        // Upload completed successfully
-                        resolve();
-                    }
-                );
-            });
-            
-            // Get download URL
-            const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
-            
-            // Create order object
+            // Create order object with Base64 image
             const order = {
                 customerName,
                 customerPhone,
@@ -297,7 +286,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 quantity,
                 unitPrice: currentPrice,
                 totalPrice: currentPrice * quantity,
-                paymentProofURL: downloadURL,
+                paymentProofBase64: base64Image, // Store as Base64
+                paymentProofFilename: paymentProof.name,
                 status: 'pending',
                 orderDate: new Date(),
                 estimatedDelivery: parseInt(selectedMenu.preparationTime) + 30,
@@ -316,15 +306,20 @@ document.addEventListener('DOMContentLoaded', function() {
             // Hide form
             document.getElementById('orderForm').classList.add('d-none');
             
+            // Update progress steps
+            updateProgressSteps(2);
+            
             // Show success toast
             showToast('Order placed successfully!', 'success');
             
         } catch (error) {
             console.error('Error processing order:', error);
             
-            // Check if it's a Firebase storage error (free tier limitation)
-            if (error.code === 'storage/unauthorized') {
-                showToast('Payment proof upload failed. Please try again or contact support.', 'danger');
+            // Check if it's a Firebase error
+            if (error.code === 'permission-denied') {
+                showToast('Database permission error. Please contact support.', 'danger');
+            } else if (error.code === 'unavailable') {
+                showToast('Network error. Please check your connection and try again.', 'danger');
             } else {
                 showToast('Failed to place order. Please try again.', 'danger');
             }
@@ -334,7 +329,20 @@ document.addEventListener('DOMContentLoaded', function() {
             submitButton.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Place Order';
         }
     });
-
+    
+    // Update progress steps
+    function updateProgressSteps(activeStep) {
+        document.querySelectorAll('.order-step').forEach((step, index) => {
+            step.classList.remove('step-active', 'step-completed');
+            
+            if (index < activeStep) {
+                step.classList.add('step-completed');
+            } else if (index === activeStep) {
+                step.classList.add('step-active');
+            }
+        });
+    }
+    
     // Image preview functionality
     document.getElementById('paymentProof').addEventListener('change', function(e) {
         const file = e.target.files[0];
@@ -354,63 +362,33 @@ document.addEventListener('DOMContentLoaded', function() {
             preview.classList.add('d-none');
         }
     });
-
+    
     // Remove image functionality
     document.getElementById('removeImage').addEventListener('click', function() {
         document.getElementById('paymentProof').value = '';
         document.getElementById('uploadPreview').classList.add('d-none');
     });
-
-    // Update progress steps when payment section is shown
-    const originalDisplayMenuDetails = displayMenuDetails;
-    displayMenuDetails = function(menuItem) {
-        originalDisplayMenuDetails(menuItem);
-        
-        // Update progress steps
-        document.querySelectorAll('.order-step').forEach((step, index) => {
-            if (index === 1) {
-                step.classList.add('step-active');
-            } else if (index < 1) {
-                step.classList.add('step-completed');
-            } else {
-                step.classList.remove('step-active', 'step-completed');
-            }
-        });
-    };
-
-    // Update progress steps when form is submitted
-    const originalSubmitHandler = document.getElementById('orderForm').onsubmit;
-    document.getElementById('orderForm').onsubmit = function(e) {
-        // Update progress steps
-        document.querySelectorAll('.order-step').forEach((step, index) => {
-            if (index === 2) {
-                step.classList.add('step-active');
-            } else if (index < 2) {
-                step.classList.add('step-completed');
-            } else {
-                step.classList.remove('step-active', 'step-completed');
-            }
-        });
-        
-        return originalSubmitHandler ? originalSubmitHandler.call(this, e) : true;
-    };
     
     // Initialize page
     loadMenuItems();
+    updateProgressSteps(0);
     
-    // Add demo mode functionality for testing
+    // Setup demo mode for testing
     setupDemoMode();
     
     // Setup demo mode for testing without Firebase
     function setupDemoMode() {
-        const demoButton = document.createElement('button');
-        demoButton.className = 'btn btn-outline-secondary position-fixed';
-        demoButton.style.bottom = '20px';
-        demoButton.style.right = '20px';
-        demoButton.style.zIndex = '1000';
-        demoButton.innerHTML = '<i class="fas fa-magic me-1"></i> Demo Mode';
-        demoButton.addEventListener('click', activateDemoMode);
-        document.body.appendChild(demoButton);
+        // Check if we're in a development environment
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            const demoButton = document.createElement('button');
+            demoButton.className = 'btn btn-outline-secondary position-fixed';
+            demoButton.style.bottom = '20px';
+            demoButton.style.right = '20px';
+            demoButton.style.zIndex = '1000';
+            demoButton.innerHTML = '<i class="fas fa-magic me-1"></i> Demo Mode';
+            demoButton.addEventListener('click', activateDemoMode);
+            document.body.appendChild(demoButton);
+        }
     }
     
     function activateDemoMode() {
@@ -425,6 +403,9 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('deliveryTime').textContent = '45';
         document.getElementById('orderConfirmation').classList.remove('d-none');
         document.getElementById('orderForm').classList.add('d-none');
+        
+        // Update progress steps
+        updateProgressSteps(2);
         
         showToast('Demo order placed successfully!', 'success');
     }

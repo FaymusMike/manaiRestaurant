@@ -632,44 +632,35 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Populate payment proof
         const paymentProofContainer = document.getElementById('paymentProofContainer');
-        if (order.paymentProofURL) {
-            // Check if it's an image (common image extensions)
-            const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
-            const isImage = imageExtensions.some(ext => order.paymentProofURL.toLowerCase().includes(ext));
-            
-            if (isImage) {
-                // Display image with preview
-                paymentProofContainer.innerHTML = `
-                    <div class="mb-3">
-                        <img src="${order.paymentProofURL}" alt="Payment Proof" 
-                            class="img-fluid rounded shadow-sm" style="max-height: 300px;">
-                    </div>
-                    <div>
-                        <a href="${order.paymentProofURL}" target="_blank" class="btn btn-outline-primary btn-sm">
-                            <i class="fas fa-external-link-alt me-1"></i> Open in New Tab
-                        </a>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard('${order.paymentProofURL}')">
-                            <i class="fas fa-copy me-1"></i> Copy Link
-                        </button>
-                    </div>
-                `;
-            } else {
-                // Display download link for non-image files
-                paymentProofContainer.innerHTML = `
-                    <div class="alert alert-info">
-                        <i class="fas fa-file me-2"></i>
-                        Payment proof document
-                    </div>
-                    <div>
-                        <a href="${order.paymentProofURL}" target="_blank" class="btn btn-outline-primary btn-sm">
-                            <i class="fas fa-download me-1"></i> Download Proof
-                        </a>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard('${order.paymentProofURL}')">
-                            <i class="fas fa-copy me-1"></i> Copy Link
-                        </button>
-                    </div>
-                `;
-            }
+        if (order.paymentProofBase64) {
+            // Display Base64 image
+            paymentProofContainer.innerHTML = `
+                <div class="mb-3">
+                    <img src="${order.paymentProofBase64}" alt="Payment Proof" 
+                        class="img-fluid rounded shadow-sm" style="max-height: 300px;">
+                </div>
+                <div>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard('${order.paymentProofBase64}')">
+                        <i class="fas fa-copy me-1"></i> Copy Image Data
+                    </button>
+                </div>
+            `;
+        } else if (order.paymentProofURL) {
+            // Display URL image (for backward compatibility)
+            paymentProofContainer.innerHTML = `
+                <div class="mb-3">
+                    <img src="${order.paymentProofURL}" alt="Payment Proof" 
+                        class="img-fluid rounded shadow-sm" style="max-height: 300px;">
+                </div>
+                <div>
+                    <a href="${order.paymentProofURL}" target="_blank" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-external-link-alt me-1"></i> Open in New Tab
+                    </a>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard('${order.paymentProofURL}')">
+                        <i class="fas fa-copy me-1"></i> Copy Link
+                    </button>
+                </div>
+            `;
         } else {
             paymentProofContainer.innerHTML = '<p class="text-muted">No payment proof available</p>';
         }
