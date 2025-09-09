@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track Order - Manai Restaurant</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+    <style>
+        .tracking-progress {
+            display: flex;
+            justify-content: space-between;
+            margin: 2rem 0;
+            position: relative;
+        }
+        .tracking-step {
+            text-align: center;
+            flex: 1;
+            position: relative;
+            z-index: 2;
+        }
+        .step-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+        .step-active .step-icon {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        .step-completed .step-icon {
+            background-color: var(--success-color);
+            color: white;
+        }
+        .step-text {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        .step-active .step-text {
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+        .tracking-progress:before {
+            content: '';
+            position: absolute;
+            top: 25px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background-color: #e9ecef;
+            z-index: 1;
+        }
+        .order-details-card {
+            border-left: 4px solid var(--primary-color);
+        }
+        @media (max-width: 768px) {
+            .tracking-progress {
+                flex-direction: column;
+                gap: 20px;
+            }
+            .tracking-progress:before {
+                display: none;
+            }
+            .tracking-step {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                text-align: left;
+            }
+            .step-icon {
+                margin: 0;
+                flex-shrink: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top custom-navbar">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <span>Manai Restaurant</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="menu.html">Menu</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="order.html">Order</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="order-tracking.html">Track Order</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="admin.html">Admin</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5 pt-5">
+        <h1 class="text-center mb-4">Track Your Order</h1>
+        
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card shadow mb-4">
+                    <div class="card-body p-4">
+                        <form id="trackOrderForm">
+                            <div class="mb-3">
+                                <label for="orderIdInput" class="form-label">Enter Your Order ID</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="orderIdInput" placeholder="e.g. ORDER12345" required>
+                                    <button class="btn btn-primary" type="submit" id="trackOrderBtn">
+                                        <i class="fas fa-search me-1"></i> Track Order
+                                    </button>
+                                </div>
+                                <div class="form-text">You can find your Order ID in your confirmation email or SMS</div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <div id="orderDetails" class="d-none">
+                    <div class="card order-details-card shadow mb-4">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0">Order #<span id="trackingOrderId"></span></h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <h6>Customer Information</h6>
+                                    <p><strong>Name:</strong> <span id="trackingCustomerName"></span></p>
+                                    <p><strong>Phone:</strong> <span id="trackingCustomerPhone"></span></p>
+                                    <p><strong>Address:</strong> <span id="trackingCustomerAddress"></span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Order Information</h6>
+                                    <p><strong>Order Date:</strong> <span id="trackingOrderDate"></span></p>
+                                    <p><strong>Total Amount:</strong> <span id="trackingOrderTotal"></span></p>
+                                    <p><strong>Status:</strong> <span id="trackingOrderStatus" class="badge"></span></p>
+                                </div>
+                            </div>
+                            
+                            <h6>Order Items</h6>
+                            <div id="trackingOrderItems" class="mb-4">
+                                <!-- Order items will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card shadow">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0">Order Status</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="tracking-progress">
+                                <div class="tracking-step step-completed" id="stepPending">
+                                    <div class="step-icon">
+                                        <i class="fas fa-clock"></i>
+                                    </div>
+                                    <div class="step-text">Pending</div>
+                                </div>
+                                <div class="tracking-step" id="stepPreparing">
+                                    <div class="step-icon">
+                                        <i class="fas fa-utensils"></i>
+                                    </div>
+                                    <div class="step-text">Preparing</div>
+                                </div>
+                                <div class="tracking-step" id="stepDelivering">
+                                    <div class="step-icon">
+                                        <i class="fas fa-truck"></i>
+                                    </div>
+                                    <div class="step-text">Delivering</div>
+                                </div>
+                                <div class="tracking-step" id="stepCompleted">
+                                    <div class="step-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <div class="step-text">Completed</div>
+                                </div>
+                            </div>
+                            
+                            <div id="deliveryEstimate" class="text-center mt-4">
+                                <p class="mb-1"><i class="fas fa-clock me-2"></i> Estimated Delivery</p>
+                                <h4 id="deliveryTimeRemaining" class="text-primary">Calculating...</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="orderNotFound" class="alert alert-warning mt-4 d-none">
+                    <div class="d-flex">
+                        <div class="me-3">
+                            <i class="fas fa-exclamation-circle fa-2x"></i>
+                        </div>
+                        <div>
+                            <h5 class="alert-heading">Order Not Found</h5>
+                            <p class="mb-0">We couldn't find an order with that ID. Please check your Order ID and try again.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/order-tracking.js"></script>
+</body>
+</html>

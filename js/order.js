@@ -216,7 +216,7 @@ document.addEventListener('DOMContentLoaded', function() {
         menuDetails.classList.remove('d-none');
     }
     
-    // Add to cart functionality
+    // Add to cart functionality - FIXED VERSION
     function addToCart() {
         if (!selectedMenu || !selectedSize) {
             showToast('Please select a menu item and size', 'warning');
@@ -226,25 +226,35 @@ document.addEventListener('DOMContentLoaded', function() {
         const quantity = parseInt(document.getElementById('quantity').value) || 1;
         const itemTotal = currentPrice * quantity;
         
-        // Create cart item
-        const cartItem = {
-            id: Date.now(), // Unique ID for cart item
-            menuId: selectedMenu.id,
-            name: selectedMenu.name,
-            size: selectedSize,
-            price: currentPrice,
-            quantity: quantity,
-            total: itemTotal
-        };
+        // Check if item already exists in cart
+        const existingItemIndex = cartItems.findIndex(item => 
+            item.menuId === selectedMenu.id && item.size === selectedSize
+        );
         
-        // Add to cart array
-        cartItems.push(cartItem);
+        if (existingItemIndex !== -1) {
+            // Update quantity if item already exists
+            cartItems[existingItemIndex].quantity += quantity;
+            cartItems[existingItemIndex].total = cartItems[existingItemIndex].price * cartItems[existingItemIndex].quantity;
+            showToast(`Updated quantity for ${selectedMenu.name} (${selectedSize})`, 'info');
+        } else {
+            // Create new cart item
+            const cartItem = {
+                id: Date.now(), // Unique ID for cart item
+                menuId: selectedMenu.id,
+                name: selectedMenu.name,
+                size: selectedSize,
+                price: currentPrice,
+                quantity: quantity,
+                total: itemTotal
+            };
+            
+            // Add to cart array
+            cartItems.push(cartItem);
+            showToast(`${quantity} x ${selectedMenu.name} (${selectedSize}) added to cart`, 'success');
+        }
         
         // Update cart UI
         updateCartUI();
-        
-        // Show success message
-        showToast(`${quantity} x ${selectedMenu.name} (${selectedSize}) added to cart`, 'success');
         
         // Reset quantity
         document.getElementById('quantity').value = 1;

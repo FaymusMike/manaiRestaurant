@@ -31,6 +31,9 @@
                         <a class="nav-link" href="order.html">Order</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link active" href="order-tracking.html">Track Order</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="admin.html">Admin</a>
                     </li>
                 </ul>
@@ -55,13 +58,31 @@
         <div class="container">
             <div class="row">
                 <div class="col-md-8 mx-auto">
-                    <div class="d-flex flex-wrap justify-content-center gap-2">
+                    <!-- Desktop filter buttons (visible on larger screens) -->
+                    <div class="d-none d-md-flex flex-wrap justify-content-center gap-2">
                         <button class="btn btn-outline-primary filter-btn active" data-filter="all">All</button>
                         <button class="btn btn-outline-primary filter-btn" data-filter="main">Main Dishes</button>
                         <button class="btn btn-outline-primary filter-btn" data-filter="soup">Soups</button>
                         <button class="btn btn-outline-primary filter-btn" data-filter="swallow">Swallows</button>
                         <button class="btn btn-outline-primary filter-btn" data-filter="protein">Proteins</button>
                         <button class="btn btn-outline-primary filter-btn" data-filter="drink">Drinks</button>
+                    </div>
+                    
+                    <!-- Mobile filter dropdown (visible on smaller screens) -->
+                    <div class="d-md-none">
+                        <div class="dropdown">
+                            <button class="btn btn-outline-primary dropdown-toggle w-100" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-filter me-2"></i> Filter Menu
+                            </button>
+                            <ul class="dropdown-menu w-100" aria-labelledby="filterDropdown">
+                                <li><a class="dropdown-item filter-btn active" href="#" data-filter="all">All Items</a></li>
+                                <li><a class="dropdown-item filter-btn" href="#" data-filter="main">Main Dishes</a></li>
+                                <li><a class="dropdown-item filter-btn" href="#" data-filter="soup">Soups</a></li>
+                                <li><a class="dropdown-item filter-btn" href="#" data-filter="swallow">Swallows</a></li>
+                                <li><a class="dropdown-item filter-btn" href="#" data-filter="protein">Proteins</a></li>
+                                <li><a class="dropdown-item filter-btn" href="#" data-filter="drink">Drinks</a></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>

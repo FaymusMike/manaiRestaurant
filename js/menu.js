@@ -140,6 +140,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Filter menu items
     function setupFiltering() {
+        // Handle desktop filter buttons
         const filterButtons = document.querySelectorAll('.filter-btn');
         
         filterButtons.forEach(button => {
@@ -152,44 +153,51 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Show/hide items based on filter
                 const menuItems = document.querySelectorAll('.menu-item');
-                let visibleItems = 0;
                 
                 menuItems.forEach(item => {
                     if (filter === 'all' || item.classList.contains(filter)) {
                         item.style.display = 'block';
-                        visibleItems++;
                     } else {
                         item.style.display = 'none';
                     }
-                });
                 
                 // Show message if no items match the filter
                 const menuContainer = document.getElementById('menuItemsContainer');
-                if (visibleItems === 0) {
-                    const noItemsMessage = document.createElement('div');
-                    noItemsMessage.className = 'col-12 text-center';
-                    noItemsMessage.innerHTML = `
-                        <div class="alert alert-info mt-4">
-                            <i class="fas fa-info-circle me-2"></i>
-                            No menu items found in this category.
-                        </div>
-                    `;
-                    
-                    // Check if message already exists
-                    if (!menuContainer.querySelector('.alert')) {
-                        menuContainer.appendChild(noItemsMessage);
-                    }
-                } else {
-                    // Remove any existing messages
-                    const existingMessage = menuContainer.querySelector('.alert');
-                    if (existingMessage) {
-                        existingMessage.remove();
-                    }
-                }
+                    if (visibleItems === 0) {
+                        const noItemsMessage = document.createElement('div');
+                        noItemsMessage.className = 'col-12 text-center';
+                        noItemsMessage.innerHTML = `
+                            <div class="alert alert-info mt-4">
+                                <i class="fas fa-info-circle me-2"></i>
+                                No menu items found in this category.
+                            </div>
+                        `;
+                        
+                        // Check if message already exists
+                        if (!menuContainer.querySelector('.alert')) {
+                            menuContainer.appendChild(noItemsMessage);
+                        }
+                    } else {
+                        // Remove any existing messages
+                        const existingMessage = menuContainer.querySelector('.alert');
+                        if (existingMessage) {
+                            existingMessage.remove();
+                        }
+                    }    
+
+                });
+            });
+        });
+        
+        // Close dropdown after selection on mobile
+        document.querySelectorAll('.dropdown-item.filter-btn').forEach(item => {
+            item.addEventListener('click', function() {
+                const dropdown = document.getElementById('filterDropdown');
+                bootstrap.Dropdown.getInstance(dropdown).hide();
             });
         });
     }
-    
+                
     // Search functionality
     function setupSearch() {
         const searchInput = document.getElementById('menuSearch');
