@@ -320,8 +320,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 row.innerHTML = `
                     <td>${order.id.substring(0, 8)}...</td>
                     <td>${order.customerName}</td>
-                    <td>${order.quantity} x ${order.menuItemName} (${order.size})</td>
-                    <td>₦${order.totalPrice.toFixed(2)}</td>
+                    <td>${order.items ? order.items.length + ' item(s)' : 'N/A'}</td>
+                    <td>₦${order.total ? order.total.toFixed(2) : '0.00'}</td>
                     <td>${formattedDate} ${formattedTime}</td>
                     <td><span class="badge order-status-badge bg-${getStatusColor(order.status)}">${order.status}</span></td>
                     <td class="action-buttons">
@@ -348,7 +348,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 row.innerHTML = `
                     <td>${order.id.substring(0, 8)}...</td>
                     <td>${order.customerName}</td>
-                    <td>₦${order.totalPrice.toFixed(2)}</td>
+                    <td>₦${order.total ? order.total.toFixed(2) : '0.00'}</td>
                     <td><span class="badge order-status-badge bg-${getStatusColor(order.status)}">${order.status}</span></td>
                     <td class="action-buttons">
                         <button class="btn btn-sm btn-outline-primary view-order" data-id="${order.id}">
@@ -485,7 +485,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const totalOrders = currentOrders.length;
         const pendingOrders = currentOrders.filter(order => order.status === 'pending').length;
         const completedOrders = currentOrders.filter(order => order.status === 'completed').length;
-        const totalRevenue = currentOrders.reduce((sum, order) => sum + order.totalPrice, 0);
+        const totalRevenue = currentOrders.reduce((sum, order) => sum + (order.total || 0), 0);
         
         document.getElementById('totalOrdersCount').textContent = totalOrders;
         document.getElementById('pendingOrdersCount').textContent = pendingOrders;
@@ -573,8 +573,8 @@ document.addEventListener('DOMContentLoaded', function() {
             row.innerHTML = `
                 <td>${order.id.substring(0, 8)}...</td>
                 <td>${order.customerName}</td>
-                <td>${order.quantity} x ${order.menuItemName} (${order.size})</td>
-                <td>₦${order.totalPrice.toFixed(2)}</td>
+                <td>${order.items ? order.items.length + ' item(s)' : 'N/A'}</td>
+                <td>₦${order.total ? order.total.toFixed(2) : '0.00'}</td>
                 <td>${formattedDate} ${formattedTime}</td>
                 <td><span class="badge order-status-badge bg-${getStatusColor(order.status)}">${order.status}</span></td>
                 <td class="action-buttons">
@@ -596,7 +596,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Show order details
+    // Show order details - UPDATED TO HANDLE ARRAY OF ITEMS
     function showOrderDetails(orderId) {
         const order = currentOrders.find(o => o.id === orderId);
         if (!order) return;
@@ -615,20 +615,39 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('orderDate').textContent = orderDate.toLocaleString();
         document.getElementById('orderStatus').textContent = order.status;
         document.getElementById('orderStatus').className = `badge bg-${getStatusColor(order.status)}`;
-        document.getElementById('orderTotalAmount').textContent = `₦${order.totalPrice.toFixed(2)}`;
+        document.getElementById('orderTotalAmount').textContent = `₦${order.total ? order.total.toFixed(2) : '0.00'}`;
 
-        // Populate order items
+        // Populate order items - UPDATED FOR ARRAY
         const orderItemsList = document.getElementById('orderItemsList');
-        orderItemsList.innerHTML = `
-            <div class="card">
-                <div class="card-body">
-                    <h6>${order.menuItemName} (${order.size})</h6>
-                    <p>Quantity: ${order.quantity}</p>
-                    <p>Unit Price: ₦${order.unitPrice.toFixed(2)}</p>
-                    <p>Total: ₦${order.totalPrice.toFixed(2)}</p>
+        orderItemsList.innerHTML = '';
+        
+        if (order.items && order.items.length > 0) {
+            order.items.forEach(item => {
+                const itemElement = document.createElement('div');
+                itemElement.className = 'card mb-2';
+                itemElement.innerHTML = `
+                    <div class="card-body">
+                        <h6>${item.name} (${item.size})</h6>
+                        <p>Quantity: ${item.quantity}</p>
+                        <p>Unit Price: ₦${item.price ? item.price.toFixed(2) : '0.00'}</p>
+                        <p>Total: ₦${item.total ? item.total.toFixed(2) : '0.00'}</p>
+                    </div>
+                `;
+                orderItemsList.appendChild(itemElement);
+            });
+        } else {
+            // Fallback for old order structure
+            orderItemsList.innerHTML = `
+                <div class="card">
+                    <div class="card-body">
+                        <h6>${order.menuItemName || 'Unknown Item'} (${order.size || 'N/A'})</h6>
+                        <p>Quantity: ${order.quantity || '1'}</p>
+                        <p>Unit Price: ₦${order.unitPrice ? order.unitPrice.toFixed(2) : '0.00'}</p>
+                        <p>Total: ₦${order.totalPrice ? order.totalPrice.toFixed(2) : '0.00'}</p>
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+        }
 
         // Populate payment proof
         const paymentProofContainer = document.getElementById('paymentProofContainer');
@@ -771,18 +790,46 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <th>Total</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr>
-                                <td>${order.menuItemName} (${order.size})</td>
-                                <td>${order.quantity}</td>
-                                <td>₦${order.unitPrice.toFixed(2)}</td>
-                                <td>₦${order.totalPrice.toFixed(2)}</td>
-                            </tr>
+                        <tbody>`;
+        
+        // Add items to invoice - UPDATED FOR ARRAY
+        if (order.items && order.items.length > 0) {
+            order.items.forEach(item => {
+                invoicePreview.innerHTML += `
+                    <tr>
+                        <td>${item.name} (${item.size})</td>
+                        <td>${item.quantity}</td>
+                        <td>₦${item.price ? item.price.toFixed(2) : '0.00'}</td>
+                        <td>₦${item.total ? item.total.toFixed(2) : '0.00'}</td>
+                    </tr>
+                `;
+            });
+        } else {
+            // Fallback for old order structure
+            invoicePreview.innerHTML += `
+                <tr>
+                    <td>${order.menuItemName || 'Unknown Item'} (${order.size || 'N/A'})</td>
+                    <td>${order.quantity || '1'}</td>
+                    <td>₦${order.unitPrice ? order.unitPrice.toFixed(2) : '0.00'}</td>
+                    <td>₦${order.totalPrice ? order.totalPrice.toFixed(2) : '0.00'}</td>
+                </tr>
+            `;
+        }
+        
+        invoicePreview.innerHTML += `
                         </tbody>
                         <tfoot>
                             <tr>
+                                <th colspan="3" class="text-end">Subtotal:</th>
+                                <th>₦${order.subtotal ? order.subtotal.toFixed(2) : '0.00'}</th>
+                            </tr>
+                            <tr>
+                                <th colspan="3" class="text-end">Delivery Fee:</th>
+                                <th>₦${order.deliveryFee ? order.deliveryFee.toFixed(2) : '0.00'}</th>
+                            </tr>
+                            <tr>
                                 <th colspan="3" class="text-end">Total:</th>
-                                <th>₦${order.totalPrice.toFixed(2)}</th>
+                                <th>₦${order.total ? order.total.toFixed(2) : '0.00'}</th>
                             </tr>
                         </tfoot>
                     </table>
@@ -992,7 +1039,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateReportUI(orders) {
         const totalOrders = orders.length;
         const completedOrders = orders.filter(order => order.status === 'completed').length;
-        const totalRevenue = orders.reduce((sum, order) => sum + order.totalPrice, 0);
+        const totalRevenue = orders.reduce((sum, order) => sum + (order.total || 0), 0);
         const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
         
         document.getElementById('reportTotalOrders').textContent = totalOrders;
@@ -1003,15 +1050,31 @@ document.addEventListener('DOMContentLoaded', function() {
         // Calculate top menu items
         const menuItemCounts = {};
         orders.forEach(order => {
-            if (!menuItemCounts[order.menuItemName]) {
-                menuItemCounts[order.menuItemName] = {
-                    quantity: 0,
-                    revenue: 0
-                };
+            if (order.items && order.items.length > 0) {
+                order.items.forEach(item => {
+                    if (!menuItemCounts[item.name]) {
+                        menuItemCounts[item.name] = {
+                            quantity: 0,
+                            revenue: 0
+                        };
+                    }
+                    
+                    menuItemCounts[item.name].quantity += item.quantity;
+                    menuItemCounts[item.name].revenue += item.total;
+                });
             }
-            
-            menuItemCounts[order.menuItemName].quantity += order.quantity;
-            menuItemCounts[order.menuItemName].revenue += order.totalPrice;
+            // Fallback for old order structure
+            else if (order.menuItemName) {
+                if (!menuItemCounts[order.menuItemName]) {
+                    menuItemCounts[order.menuItemName] = {
+                        quantity: 0,
+                        revenue: 0
+                    };
+                }
+                
+                menuItemCounts[order.menuItemName].quantity += order.quantity;
+                menuItemCounts[order.menuItemName].revenue += order.totalPrice;
+            }
         });
         
         // Convert to array and sort by revenue
@@ -1071,6 +1134,7 @@ document.addEventListener('DOMContentLoaded', function() {
         toast.setAttribute('aria-live', 'assertive');
         toast.setAttribute('aria-atomic', 'true');
         
+
         toast.innerHTML = `
             <div class="d-flex">
                 <div class="toast-body">

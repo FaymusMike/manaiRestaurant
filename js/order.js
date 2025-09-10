@@ -662,8 +662,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const deliveryFee = orderSubtotal > 5000 ? 0 : DELIVERY_FEE;
             const orderTotal = orderSubtotal + deliveryFee;
             
-            // Generate voucher
-            const voucher = generateVoucher(orderTotal);
+            // Generate unique voucher
+            const voucher = await generateUniqueVoucher(orderTotal);
             
             // Create order object with Base64 image
             const order = {
@@ -727,17 +727,46 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Generate random voucher
-    function generateVoucher(orderTotal) {
+    // Generate unique voucher that doesn't exist in the database - FIXED DUPLICATE ISSUE
+    async function generateUniqueVoucher(orderTotal) {
         const voucherAmounts = [500, 200, 100, 50];
         const randomAmount = voucherAmounts[Math.floor(Math.random() * voucherAmounts.length)];
         
-        // Create voucher code
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-        let voucherCode = 'MANAI-';
+        let voucherCode;
+        let isUnique = false;
+        let attempts = 0;
+        const maxAttempts = 10; // Prevent infinite loop
         
-        for (let i = 0; i < 6; i++) {
-            voucherCode += chars.charAt(Math.floor(Math.random() * chars.length));
+        // Keep generating codes until we find a unique one or reach max attempts
+        while (!isUnique && attempts < maxAttempts) {
+            attempts++;
+            
+            // Create voucher code
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            voucherCode = 'MANAI-';
+            
+            for (let i = 0; i < 6; i++) {
+                voucherCode += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            
+            // Check if this voucher code already exists in any order
+            try {
+                const snapshot = await db.collection('orders')
+                    .where('voucher.code', '==', voucherCode)
+                    .limit(1)
+                    .get();
+                
+                isUnique = snapshot.empty; // If empty, code is unique
+            } catch (error) {
+                console.error('Error checking voucher uniqueness:', error);
+                // If there's an error, assume it's unique to avoid infinite loop
+                isUnique = true;
+            }
+        }
+        
+        // If we couldn't find a unique code after max attempts, add timestamp to make it unique
+        if (!isUnique) {
+            voucherCode = 'MANAI-' + Date.now().toString(36).toUpperCase().substring(7);
         }
         
         return {

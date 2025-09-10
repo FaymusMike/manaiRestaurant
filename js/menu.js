@@ -90,23 +90,23 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Show item details in modal    
-    // In the showItemDetails function, update the order button
     function showItemDetails(itemId) {
         db.collection('menu').doc(itemId).get().then((doc) => {
             if (doc.exists) {
                 const item = doc.data();
-                const modal = new bootstrap.Modal(document.getElementById('menuItemModal'));
+                const modalElement = document.getElementById('menuItemModal');
+                const modal = new bootstrap.Modal(modalElement);
                 
-            // Show loading state in modal
-            document.getElementById('modalItemName').textContent = 'Loading...';
-            document.getElementById('modalItemImage').src = '';
-            document.getElementById('modalItemDescription').textContent = 'Please wait while we load the item details.';
-            document.getElementById('modalItemTime').textContent = '';
-            document.getElementById('modalItemPrices').innerHTML = '<li class="text-muted">Loading prices...</li>';
-            
-            modal.show();
+                // Show loading state in modal
+                document.getElementById('modalItemName').textContent = 'Loading...';
+                document.getElementById('modalItemImage').src = '';
+                document.getElementById('modalItemDescription').textContent = 'Please wait while we load the item details.';
+                document.getElementById('modalItemTime').textContent = '';
+                document.getElementById('modalItemPrices').innerHTML = '<li class="text-muted">Loading prices...</li>';
+                
+                modal.show();
 
-
+                // Populate modal with actual data
                 document.getElementById('modalItemName').textContent = item.name;
                 document.getElementById('modalItemImage').src = item.image;
                 document.getElementById('modalItemDescription').textContent = item.description;
@@ -123,13 +123,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 // Update order button to include item ID and default size
-                const orderButton = modalElement.querySelector('.order-now-btn');
+                const orderButton = modalElement.querySelector('.btn-primary');
                 if (orderButton) {
                     orderButton.href = `order.html?item=${itemId}&size=medium`;
                     orderButton.innerHTML = '<i class="fas fa-shopping-cart me-1"></i> Add to Order';
                 }
                 
-                modal.show();
             }
         }).catch((error) => {
             console.error("Error getting menu item: ", error);
@@ -138,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Filter menu items
+    // Filter menu items - FIXED THE visibleItems BUG
     function setupFiltering() {
         // Handle desktop filter buttons
         const filterButtons = document.querySelectorAll('.filter-btn');
@@ -153,39 +152,42 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Show/hide items based on filter
                 const menuItems = document.querySelectorAll('.menu-item');
+                let visibleItems = 0; // FIXED: Added missing variable declaration
                 
                 menuItems.forEach(item => {
                     if (filter === 'all' || item.classList.contains(filter)) {
                         item.style.display = 'block';
+                        visibleItems++;
                     } else {
                         item.style.display = 'none';
                     }
+                });
                 
                 // Show message if no items match the filter
                 const menuContainer = document.getElementById('menuItemsContainer');
-                    if (visibleItems === 0) {
-                        const noItemsMessage = document.createElement('div');
-                        noItemsMessage.className = 'col-12 text-center';
-                        noItemsMessage.innerHTML = `
-                            <div class="alert alert-info mt-4">
-                                <i class="fas fa-info-circle me-2"></i>
-                                No menu items found in this category.
-                            </div>
-                        `;
-                        
-                        // Check if message already exists
-                        if (!menuContainer.querySelector('.alert')) {
-                            menuContainer.appendChild(noItemsMessage);
-                        }
-                    } else {
-                        // Remove any existing messages
-                        const existingMessage = menuContainer.querySelector('.alert');
-                        if (existingMessage) {
-                            existingMessage.remove();
-                        }
-                    }    
-
-                });
+                if (visibleItems === 0) {
+                    // Remove any existing messages first
+                    const existingMessage = menuContainer.querySelector('.alert');
+                    if (existingMessage) {
+                        existingMessage.remove();
+                    }
+                    
+                    const noItemsMessage = document.createElement('div');
+                    noItemsMessage.className = 'col-12 text-center mt-4';
+                    noItemsMessage.innerHTML = `
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            No menu items found in this category.
+                        </div>
+                    `;
+                    menuContainer.appendChild(noItemsMessage);
+                } else {
+                    // Remove any existing messages
+                    const existingMessage = menuContainer.querySelector('.alert');
+                    if (existingMessage) {
+                        existingMessage.remove();
+                    }
+                }
             });
         });
         
@@ -193,7 +195,10 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.dropdown-item.filter-btn').forEach(item => {
             item.addEventListener('click', function() {
                 const dropdown = document.getElementById('filterDropdown');
-                bootstrap.Dropdown.getInstance(dropdown).hide();
+                const dropdownInstance = bootstrap.Dropdown.getInstance(dropdown);
+                if (dropdownInstance) {
+                    dropdownInstance.hide();
+                }
             });
         });
     }
@@ -220,10 +225,39 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 // Update filter button to show "all"
-                document.querySelector('[data-filter="all"]').classList.add('active');
+                const allFilterButton = document.querySelector('[data-filter="all"]');
+                if (allFilterButton) {
+                    allFilterButton.classList.add('active');
+                }
                 document.querySelectorAll('.filter-btn:not([data-filter="all"])').forEach(btn => {
                     btn.classList.remove('active');
                 });
+                
+                // Show message if no items found
+                const menuContainer = document.getElementById('menuItemsContainer');
+                if (visibleItems === 0 && searchTerm.length > 0) {
+                    // Remove any existing messages first
+                    const existingMessage = menuContainer.querySelector('.alert');
+                    if (existingMessage) {
+                        existingMessage.remove();
+                    }
+                    
+                    const noItemsMessage = document.createElement('div');
+                    noItemsMessage.className = 'col-12 text-center mt-4';
+                    noItemsMessage.innerHTML = `
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            No menu items found matching "${searchTerm}".
+                        </div>
+                    `;
+                    menuContainer.appendChild(noItemsMessage);
+                } else {
+                    // Remove any existing messages
+                    const existingMessage = menuContainer.querySelector('.alert');
+                    if (existingMessage) {
+                        existingMessage.remove();
+                    }
+                }
             });
         }
     }

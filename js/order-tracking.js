@@ -48,6 +48,17 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Helper function to get status color - ADDED THIS FUNCTION
+    function getStatusColor(status) {
+        switch (status) {
+            case 'pending': return 'warning';
+            case 'preparing': return 'info';
+            case 'delivering': return 'primary';
+            case 'completed': return 'success';
+            default: return 'secondary';
+        }
+    }
+    
     // Set loading state for button
     function setLoadingState(button, isLoading) {
         if (isLoading) {
@@ -136,13 +147,18 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const order = doc.data();
             
+            // Convert Firestore timestamp to Date if needed - ADDED THIS CONVERSION
+            if (order.orderDate && typeof order.orderDate.toDate === 'function') {
+                order.orderDate = order.orderDate.toDate();
+            }
+            
             // Populate order details
             document.getElementById('trackingOrderId').textContent = orderId;
             document.getElementById('trackingCustomerName').textContent = order.customerName;
             document.getElementById('trackingCustomerPhone').textContent = order.customerPhone;
             document.getElementById('trackingCustomerAddress').textContent = order.customerAddress;
-            document.getElementById('trackingOrderDate').textContent = order.orderDate.toDate().toLocaleString();
-            document.getElementById('trackingOrderTotal').textContent = `₦${order.total.toFixed(2)}`;
+            document.getElementById('trackingOrderDate').textContent = order.orderDate.toLocaleString();
+            document.getElementById('trackingOrderTotal').textContent = `₦${order.total ? order.total.toFixed(2) : '0.00'}`;
             
             // Set status badge
             const statusBadge = document.getElementById('trackingOrderStatus');
@@ -162,14 +178,30 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
                                     <h6 class="mb-0">${item.name} (${item.size})</h6>
-                                    <small class="text-muted">₦${item.price.toFixed(2)} x ${item.quantity}</small>
+                                    <small class="text-muted">₦${item.price ? item.price.toFixed(2) : '0.00'} x ${item.quantity}</small>
                                 </div>
-                                <span class="fw-bold">₦${item.total.toFixed(2)}</span>
+                                <span class="fw-bold">₦${item.total ? item.total.toFixed(2) : '0.00'}</span>
                             </div>
                         </div>
                     `;
                     orderItemsContainer.appendChild(itemElement);
                 });
+            } else {
+                // Fallback for old order structure
+                const itemElement = document.createElement('div');
+                itemElement.className = 'card mb-2';
+                itemElement.innerHTML = `
+                    <div class="card-body py-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0">${order.menuItemName || 'Unknown Item'} (${order.size || 'N/A'})</h6>
+                                <small class="text-muted">₦${order.unitPrice ? order.unitPrice.toFixed(2) : '0.00'} x ${order.quantity || '1'}</small>
+                            </div>
+                            <span class="fw-bold">₦${order.totalPrice ? order.totalPrice.toFixed(2) : '0.00'}</span>
+                        </div>
+                    </div>
+                `;
+                orderItemsContainer.appendChild(itemElement);
             }
             
             // Update progress steps
@@ -197,15 +229,4 @@ document.addEventListener('DOMContentLoaded', function() {
             setLoadingState(trackButton, false);
         }
     });
-    
-    // Helper function to get status color
-    function getStatusColor(status) {
-        switch (status) {
-            case 'pending': return 'warning';
-            case 'preparing': return 'info';
-            case 'delivering': return 'primary';
-            case 'completed': return 'success';
-            default: return 'secondary';
-        }
-    }
 });
