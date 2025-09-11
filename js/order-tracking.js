@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Helper function to get status color - ADDED THIS FUNCTION
+    // Helper function to get status color
     function getStatusColor(status) {
         switch (status) {
             case 'pending': return 'warning';
@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function setLoadingState(button, isLoading) {
         if (isLoading) {
             button.disabled = true;
-            button.innerHTML = '<div class="loading-spinner"></div> Tracking...';
+            button.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div> Tracking...';
         } else {
             button.disabled = false;
             button.innerHTML = '<i class="fas fa-search me-1"></i> Track Order';
@@ -98,14 +98,18 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Calculate delivery time remaining
-    function calculateDeliveryTime(orderDate, estimatedMinutes) {
+    // Calculate delivery time remaining with automatic updates
+    function calculateDeliveryTime(orderDate, estimatedMinutes, status) {
+        if (status === 'completed') {
+            return "Delivered";
+        }
+        
         const orderTime = orderDate.toDate();
         const estimatedDelivery = new Date(orderTime.getTime() + estimatedMinutes * 60000);
         const now = new Date();
         
-        if (now >= estimatedDelivery) {
-            return "Delivered";
+        if (now >= estimatedDelivery && status !== 'completed') {
+            return "Should be delivered soon";
         }
         
         const diffMs = estimatedDelivery - now;
@@ -114,9 +118,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const remainingMins = diffMins % 60;
         
         if (diffHours > 0) {
-            return `${diffHours}h ${remainingMins}m`;
+            return `${diffHours}h ${remainingMins}m remaining`;
+        } else if (remainingMins > 0) {
+            return `${remainingMins} minutes remaining`;
         } else {
-            return `${remainingMins} minutes`;
+            return "Arriving soon";
         }
     }
     
@@ -125,6 +131,7 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         
         const orderId = document.getElementById('orderIdInput').value.trim();
+        const customerPhone = document.getElementById('customerPhoneVerify').value.trim();
         const trackButton = document.getElementById('trackOrderBtn');
         
         if (!orderId) {
@@ -132,22 +139,37 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        if (!customerPhone) {
+            showToast('Please enter your phone number', 'warning');
+            return;
+        }
+        
         setLoadingState(trackButton, true);
         
         try {
-            // Get order from Firestore
+            // Get order from Firestore with phone verification
             const doc = await db.collection('orders').doc(orderId).get();
             
             if (!doc.exists) {
                 document.getElementById('orderDetails').classList.add('d-none');
                 document.getElementById('orderNotFound').classList.remove('d-none');
                 showToast('Order not found', 'warning');
+                setLoadingState(trackButton, false);
                 return;
             }
             
             const order = doc.data();
             
-            // Convert Firestore timestamp to Date if needed - ADDED THIS CONVERSION
+            // Verify phone number matches
+            if (order.customerPhone !== customerPhone) {
+                document.getElementById('orderDetails').classList.add('d-none');
+                document.getElementById('orderNotFound').classList.remove('d-none');
+                showToast('Order not found or phone number does not match', 'warning');
+                setLoadingState(trackButton, false);
+                return;
+            }
+            
+            // Convert Firestore timestamp to Date if needed
             if (order.orderDate && typeof order.orderDate.toDate === 'function') {
                 order.orderDate = order.orderDate.toDate();
             }
@@ -165,53 +187,62 @@ document.addEventListener('DOMContentLoaded', function() {
             statusBadge.textContent = order.status;
             statusBadge.className = `badge bg-${getStatusColor(order.status)}`;
             
-            // Populate order items
+            // Populate order items in a table format
             const orderItemsContainer = document.getElementById('trackingOrderItems');
             orderItemsContainer.innerHTML = '';
             
             if (order.items && order.items.length > 0) {
+                orderItemsContainer.innerHTML = `
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th class="text-center">Size</th>
+                                    <th class="text-center">Qty</th>
+                                    <th class="text-end">Price (₦)</th>
+                                    <th class="text-end">Total (₦)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
                 order.items.forEach(item => {
-                    const itemElement = document.createElement('div');
-                    itemElement.className = 'card mb-2';
-                    itemElement.innerHTML = `
-                        <div class="card-body py-2">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h6 class="mb-0">${item.name} (${item.size})</h6>
-                                    <small class="text-muted">₦${item.price ? item.price.toFixed(2) : '0.00'} x ${item.quantity}</small>
-                                </div>
-                                <span class="fw-bold">₦${item.total ? item.total.toFixed(2) : '0.00'}</span>
-                            </div>
-                        </div>
+                    orderItemsContainer.innerHTML += `
+                        <tr>
+                            <td>${item.name}</td>
+                            <td class="text-center">${item.size}</td>
+                            <td class="text-center">${item.quantity}</td>
+                            <td class="text-end">${item.price ? item.price.toFixed(2) : '0.00'}</td>
+                            <td class="text-end">${item.total ? item.total.toFixed(2) : '0.00'}</td>
+                        </tr>
                     `;
-                    orderItemsContainer.appendChild(itemElement);
                 });
-            } else {
-                // Fallback for old order structure
-                const itemElement = document.createElement('div');
-                itemElement.className = 'card mb-2';
-                itemElement.innerHTML = `
-                    <div class="card-body py-2">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="mb-0">${order.menuItemName || 'Unknown Item'} (${order.size || 'N/A'})</h6>
-                                <small class="text-muted">₦${order.unitPrice ? order.unitPrice.toFixed(2) : '0.00'} x ${order.quantity || '1'}</small>
-                            </div>
-                            <span class="fw-bold">₦${order.totalPrice ? order.totalPrice.toFixed(2) : '0.00'}</span>
-                        </div>
+                
+                orderItemsContainer.innerHTML += `
+                            </tbody>
+                        </table>
                     </div>
                 `;
-                orderItemsContainer.appendChild(itemElement);
             }
             
             // Update progress steps
             updateProgressSteps(order.status);
             
-            // Update delivery estimate
-            if (order.status !== 'completed') {
-                const deliveryTime = calculateDeliveryTime(order.orderDate, order.estimatedDelivery || 45);
+            // Update delivery estimate with auto-refresh
+            function updateDeliveryTime() {
+                const deliveryTime = calculateDeliveryTime(order.orderDate, order.estimatedDelivery || 45, order.status);
                 document.getElementById('deliveryTimeRemaining').textContent = deliveryTime;
-            } else {
+                
+                if (order.status !== 'completed') {
+                    // Keep updating every minute
+                    setTimeout(updateDeliveryTime, 60000);
+                }
+            }
+            
+            updateDeliveryTime();
+            
+            if (order.status === 'completed') {
                 document.getElementById('deliveryTimeRemaining').textContent = 'Delivered';
                 document.getElementById('deliveryEstimate').classList.add('text-success');
             }
@@ -224,7 +255,11 @@ document.addEventListener('DOMContentLoaded', function() {
             
         } catch (error) {
             console.error('Error tracking order:', error);
-            showToast('Failed to track order. Please try again.', 'danger');
+            if (error.code === 'permission-denied') {
+                showToast('Access denied. Please check your phone number and try again.', 'danger');
+            } else {
+                showToast('Failed to track order. Please try again.', 'danger');
+            }
         } finally {
             setLoadingState(trackButton, false);
         }

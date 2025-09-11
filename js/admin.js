@@ -596,7 +596,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Show order details - UPDATED TO HANDLE ARRAY OF ITEMS
+    // Show order details - FIXED TABLE FORMAT FOR ITEMS
     function showOrderDetails(orderId) {
         const order = currentOrders.find(o => o.id === orderId);
         if (!order) return;
@@ -617,34 +617,82 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('orderStatus').className = `badge bg-${getStatusColor(order.status)}`;
         document.getElementById('orderTotalAmount').textContent = `₦${order.total ? order.total.toFixed(2) : '0.00'}`;
 
-        // Populate order items - UPDATED FOR ARRAY
+        // Populate order items - FIXED TABLE FORMAT
         const orderItemsList = document.getElementById('orderItemsList');
         orderItemsList.innerHTML = '';
         
         if (order.items && order.items.length > 0) {
+            // Create table for order items
+            orderItemsList.innerHTML = `
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th class="text-center">Size</th>
+                                <th class="text-center">Qty</th>
+                                <th class="text-end">Unit Price (₦)</th>
+                                <th class="text-end">Total (₦)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
             order.items.forEach(item => {
-                const itemElement = document.createElement('div');
-                itemElement.className = 'card mb-2';
-                itemElement.innerHTML = `
-                    <div class="card-body">
-                        <h6>${item.name} (${item.size})</h6>
-                        <p>Quantity: ${item.quantity}</p>
-                        <p>Unit Price: ₦${item.price ? item.price.toFixed(2) : '0.00'}</p>
-                        <p>Total: ₦${item.total ? item.total.toFixed(2) : '0.00'}</p>
-                    </div>
+                orderItemsList.innerHTML += `
+                    <tr>
+                        <td>${item.name}</td>
+                        <td class="text-center">${item.size}</td>
+                        <td class="text-center">${item.quantity}</td>
+                        <td class="text-end">${item.price ? item.price.toFixed(2) : '0.00'}</td>
+                        <td class="text-end">${item.total ? item.total.toFixed(2) : '0.00'}</td>
+                    </tr>
                 `;
-                orderItemsList.appendChild(itemElement);
             });
+            
+            orderItemsList.innerHTML += `
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th colspan="4" class="text-end">Subtotal:</th>
+                                <th class="text-end">₦${order.subtotal ? order.subtotal.toFixed(2) : '0.00'}</th>
+                            </tr>
+                            <tr>
+                                <th colspan="4" class="text-end">Delivery Fee:</th>
+                                <th class="text-end">₦${order.deliveryFee ? order.deliveryFee.toFixed(2) : '0.00'}</th>
+                            </tr>
+                            <tr>
+                                <th colspan="4" class="text-end">Total:</th>
+                                <th class="text-end">₦${order.total ? order.total.toFixed(2) : '0.00'}</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            `;
         } else {
             // Fallback for old order structure
             orderItemsList.innerHTML = `
-                <div class="card">
-                    <div class="card-body">
-                        <h6>${order.menuItemName || 'Unknown Item'} (${order.size || 'N/A'})</h6>
-                        <p>Quantity: ${order.quantity || '1'}</p>
-                        <p>Unit Price: ₦${order.unitPrice ? order.unitPrice.toFixed(2) : '0.00'}</p>
-                        <p>Total: ₦${order.totalPrice ? order.totalPrice.toFixed(2) : '0.00'}</p>
-                    </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th class="text-center">Size</th>
+                                <th class="text-center">Qty</th>
+                                <th class="text-end">Unit Price (₦)</th>
+                                <th class="text-end">Total (₦)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>${order.menuItemName || 'Unknown Item'}</td>
+                                <td class="text-center">${order.size || 'N/A'}</td>
+                                <td class="text-center">${order.quantity || '1'}</td>
+                                <td class="text-end">${order.unitPrice ? order.unitPrice.toFixed(2) : '0.00'}</td>
+                                <td class="text-end">${order.totalPrice ? order.totalPrice.toFixed(2) : '0.00'}</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             `;
         }

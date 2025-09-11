@@ -1,4 +1,5 @@
 // Firebase configuration - Replace with your actual config
+// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDd8YhMDGofLRg03816XJ3PGbt1u82_gOA",
   authDomain: "manai-restaurant.firebaseapp.com",
@@ -39,11 +40,8 @@ try {
 // Initialize Firebase services with proper error handling
 function initializeFirebaseServices() {
   try {
-    // Initialize Firestore
+    // Initialize only Firestore (remove auth since we're not using it for customers)
     window.db = firebase.firestore();
-    
-    // Initialize Auth (if needed)
-    window.auth = firebase.auth();
     
     console.log("Firebase services initialized successfully");
     
@@ -56,6 +54,7 @@ function initializeFirebaseServices() {
     handleFirebaseError(error);
   }
 }
+
 
 // Enable offline persistence with error handling
 function enableOfflinePersistence() {
