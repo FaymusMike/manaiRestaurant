@@ -748,7 +748,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Generate invoice
+    // Generate invoice - FIXED TABLE FORMAT
     function generateInvoice() {
         const orderId = this.getAttribute('data-id');
         const order = currentOrders.find(o => o.id === orderId);
@@ -757,7 +757,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const orderDate = order.orderDate;
         const invoicePreview = document.getElementById('invoicePreview');
         
-        // Create invoice HTML
+        // Create invoice HTML with proper table structure
         invoicePreview.innerHTML = `
             <div class="card">
                 <div class="card-body">
@@ -785,33 +785,37 @@ document.addEventListener('DOMContentLoaded', function() {
                         <thead>
                             <tr>
                                 <th>Description</th>
-                                <th>Quantity</th>
-                                <th>Unit Price</th>
-                                <th>Total</th>
+                                <th class="text-center">Quantity</th>
+                                <th class="text-end">Unit Price (₦)</th>
+                                <th class="text-end">Total (₦)</th>
                             </tr>
                         </thead>
                         <tbody>`;
         
-        // Add items to invoice - UPDATED FOR ARRAY
+        let itemsTotal = 0;
+        
+        // Add items to invoice - PROPERLY FORMATTED
         if (order.items && order.items.length > 0) {
             order.items.forEach(item => {
+                itemsTotal += item.total;
                 invoicePreview.innerHTML += `
                     <tr>
                         <td>${item.name} (${item.size})</td>
-                        <td>${item.quantity}</td>
-                        <td>₦${item.price ? item.price.toFixed(2) : '0.00'}</td>
-                        <td>₦${item.total ? item.total.toFixed(2) : '0.00'}</td>
+                        <td class="text-center">${item.quantity}</td>
+                        <td class="text-end">${item.price ? item.price.toFixed(2) : '0.00'}</td>
+                        <td class="text-end">${item.total ? item.total.toFixed(2) : '0.00'}</td>
                     </tr>
                 `;
             });
         } else {
             // Fallback for old order structure
+            itemsTotal = order.totalPrice || 0;
             invoicePreview.innerHTML += `
                 <tr>
                     <td>${order.menuItemName || 'Unknown Item'} (${order.size || 'N/A'})</td>
-                    <td>${order.quantity || '1'}</td>
-                    <td>₦${order.unitPrice ? order.unitPrice.toFixed(2) : '0.00'}</td>
-                    <td>₦${order.totalPrice ? order.totalPrice.toFixed(2) : '0.00'}</td>
+                    <td class="text-center">${order.quantity || '1'}</td>
+                    <td class="text-end">${order.unitPrice ? order.unitPrice.toFixed(2) : '0.00'}</td>
+                    <td class="text-end">${order.totalPrice ? order.totalPrice.toFixed(2) : '0.00'}</td>
                 </tr>
             `;
         }
@@ -821,15 +825,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         <tfoot>
                             <tr>
                                 <th colspan="3" class="text-end">Subtotal:</th>
-                                <th>₦${order.subtotal ? order.subtotal.toFixed(2) : '0.00'}</th>
+                                <th class="text-end">₦${order.subtotal ? order.subtotal.toFixed(2) : itemsTotal.toFixed(2)}</th>
                             </tr>
                             <tr>
                                 <th colspan="3" class="text-end">Delivery Fee:</th>
-                                <th>₦${order.deliveryFee ? order.deliveryFee.toFixed(2) : '0.00'}</th>
+                                <th class="text-end">₦${order.deliveryFee ? order.deliveryFee.toFixed(2) : '0.00'}</th>
                             </tr>
                             <tr>
                                 <th colspan="3" class="text-end">Total:</th>
-                                <th>₦${order.total ? order.total.toFixed(2) : '0.00'}</th>
+                                <th class="text-end">₦${order.total ? order.total.toFixed(2) : itemsTotal.toFixed(2)}</th>
                             </tr>
                         </tfoot>
                     </table>

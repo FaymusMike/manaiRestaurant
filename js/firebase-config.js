@@ -42,9 +42,6 @@ function initializeFirebaseServices() {
     // Initialize Firestore
     window.db = firebase.firestore();
     
-    // Initialize Storage
-    window.storage = firebase.storage();
-    
     // Initialize Auth (if needed)
     window.auth = firebase.auth();
     
@@ -85,9 +82,6 @@ function handleFirebaseError(error) {
   
   // Show user-friendly error message
   showFirebaseErrorToUser(error);
-  
-  // You can add additional error handling logic here
-  // such as logging to an error tracking service
 }
 
 // Show user-friendly error message
@@ -122,7 +116,7 @@ function showFirebaseErrorToUser(error) {
         errorMessage = 'Database error. Please refresh the page.';
         break;
       case 'permission-denied':
-        errorMessage = 'Access denied. Please contact support.';
+        errorMessage = 'Access denied. Please contact support or check Firebase rules.';
         break;
       case 'unavailable':
         errorMessage = 'Network unavailable. Please check your connection.';
@@ -158,27 +152,13 @@ function showFirebaseErrorToUser(error) {
 
 // Utility function to check if Firebase is ready
 window.isFirebaseReady = function() {
-  return window.firebaseInitialized && window.db && window.storage;
+  return window.firebaseInitialized && window.db;
 };
 
 // Utility function to get database with fallback
 window.getDatabase = function() {
   if (window.db) {
     return window.db;
-  }
-  
-  // If Firebase failed to initialize, show error and return null
-  if (window.firebaseError) {
-    handleFirebaseError(window.firebaseError);
-  }
-  
-  return null;
-};
-
-// Utility function to get storage with fallback
-window.getStorage = function() {
-  if (window.storage) {
-    return window.storage;
   }
   
   // If Firebase failed to initialize, show error and return null
@@ -258,50 +238,4 @@ function showSuccessMessage(message) {
       successContainer.style.display = 'none';
     }
   }, 5000);
-}
-
-// Add retry button to error messages
-function addRetryButton() {
-  const errorContainer = document.getElementById('firebase-error-container');
-  if (errorContainer && !errorContainer.querySelector('.retry-button')) {
-    const retryButton = document.createElement('button');
-    retryButton.className = 'retry-button';
-    retryButton.textContent = 'Retry Connection';
-    retryButton.style.cssText = `
-      background: rgba(255,255,255,0.2);
-      border: 1px solid rgba(255,255,255,0.3);
-      color: white;
-      padding: 5px 10px;
-      border-radius: 3px;
-      cursor: pointer;
-      margin-top: 8px;
-      font-size: 12px;
-    `;
-    retryButton.onclick = window.retryFirebaseInitialization;
-    
-    const messageDiv = errorContainer.querySelector('div');
-    if (messageDiv) {
-      messageDiv.appendChild(retryButton);
-    }
-  }
-}
-
-// Monitor connection state
-if (navigator.onLine) {
-  window.addEventListener('online', function() {
-    console.log("Network connection restored");
-    if (window.firebaseError && window.firebaseError.code === 'unavailable') {
-      window.retryFirebaseInitialization();
-    }
-  });
-  
-  window.addEventListener('offline', function() {
-    console.log("Network connection lost");
-    if (window.firebaseInitialized) {
-      handleFirebaseError({ 
-        code: 'unavailable', 
-        message: 'Network connection lost' 
-      });
-    }
-  });
 }
